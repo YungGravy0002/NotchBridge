@@ -18,6 +18,7 @@ struct SettingsView: View {
     @ObservedObject private var alertPrefs = AlertThresholdStore.shared
     @ObservedObject private var spacing = IslandSpacingStore.shared
     @ObservedObject private var usageDisplay = UsageDisplayModeStore.shared
+    @ObservedObject private var peekWindows = PeekWindowStore.shared
     @ObservedObject private var targetDisplay = IslandTargetDisplayStore.shared
     @ObservedObject private var appLanguage = AppLanguageStore.shared
     @ObservedObject private var usage = UsageStore.shared
@@ -633,6 +634,18 @@ struct SettingsView: View {
             ) {
                 usageDisplaySegmented
             }
+            SettingsRow(
+                title: "Claude window",
+                subtitle: "Which window the compact pill shows. Auto prefers 5-hour."
+            ) {
+                peekWindowSegmented(for: .claude)
+            }
+            SettingsRow(
+                title: "Codex window",
+                subtitle: "Which window the compact pill shows. Auto prefers 5-hour."
+            ) {
+                peekWindowSegmented(for: .codex)
+            }
         }
         .padding(.horizontal, 14)
         .padding(.top, 18)
@@ -674,6 +687,15 @@ struct SettingsView: View {
             selected: $spacing.mode,
             label: { $0 == .compact ? "Compact" : "Notch-style" },
             accessibilityPrefix: "Island width"
+        )
+    }
+
+    private func peekWindowSegmented(for provider: IslandProvider) -> some View {
+        SegmentedControl(
+            items: PeekWindowPreference.allCases,
+            selected: peekWindows.binding(for: provider),
+            label: \.label,
+            accessibilityPrefix: "\(provider.name) window"
         )
     }
 

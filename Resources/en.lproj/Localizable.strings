@@ -345,3 +345,8 @@
 "The usage archive changed. Scan again before saving." = "The usage archive changed. Scan again before saving.";
 "A selected recovery source is no longer available. Choose it again, then scan." = "A selected recovery source is no longer available. Choose it again, then scan.";
 "Saved token counts exceed the supported range. Check the recovery files before trying again." = "Saved token counts exceed the supported range. Check the recovery files before trying again.";
+"5-hour" = "5-hour";
+"Weekly" = "Weekly";
+"Claude window" = "Claude window";
+"Codex window" = "Codex window";
+"Which window the compact pill shows. Auto prefers 5-hour." = "Which window the compact pill shows. Auto prefers 5-hour.";

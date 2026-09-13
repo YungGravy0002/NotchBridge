@@ -345,3 +345,8 @@
 "The usage archive changed. Scan again before saving." = "用量存档已更改。请重新扫描后再保存。";
 "A selected recovery source is no longer available. Choose it again, then scan." = "所选恢复来源已不可用。请重新选择后再扫描。";
 "Saved token counts exceed the supported range. Check the recovery files before trying again." = "保存的 token 数量超出了支持范围。请检查恢复文件后重试。";
+"5-hour" = "5 小时";
+"Weekly" = "每周";
+"Claude window" = "Claude 窗口";
+"Codex window" = "Codex 窗口";
+"Which window the compact pill shows. Auto prefers 5-hour." = "紧凑视图显示哪个窗口。自动优先显示 5 小时。";
