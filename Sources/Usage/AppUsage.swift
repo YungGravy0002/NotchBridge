@@ -19,7 +19,7 @@ enum UsageWindow: String, Codable {
 
 /// One rate-limit window (e.g. Claude's 5h, Codex's 7d). usedPercent is
 /// normalized to 0...1 regardless of what the upstream API returns.
-struct WindowUsage {
+struct WindowUsage: Equatable {
     let usedPercent: Double
     let resetAt: Date?
     let error: String?
@@ -65,9 +65,20 @@ struct WindowUsage {
     }
 }
 
+/// A rate-limit window scoped to one model (e.g. Claude's weekly Fable
+/// limit). OBSERVED, not documented: comes from `limits[]` entries with
+/// `kind == "weekly_scoped"` on api.anthropic.com/api/oauth/usage.
+struct ScopedWindow: Equatable, Identifiable {
+    let name: String
+    let usage: WindowUsage
+    var id: String { name }
+}
+
 struct AppUsage {
     var fiveHour: WindowUsage
     var weekly: WindowUsage
+    /// Model-scoped weekly windows, in the order the provider reported them.
+    var scopedWindows: [ScopedWindow]
     /// Provider-reported plan tier — Claude's `subscriptionType` (free/pro/max)
     /// or Codex's `plan_type` (free/plus/pro). nil when unknown.
     var plan: String?
@@ -76,11 +87,12 @@ struct AppUsage {
     var reportedWindows: [UsageWindow]?
 
     init(fiveHour: WindowUsage, weekly: WindowUsage, plan: String? = nil,
-         reportedWindows: [UsageWindow]? = nil) {
+         reportedWindows: [UsageWindow]? = nil, scopedWindows: [ScopedWindow] = []) {
         self.fiveHour = fiveHour
         self.weekly = weekly
         self.plan = plan
         self.reportedWindows = reportedWindows
+        self.scopedWindows = scopedWindows
     }
 
     static let empty = AppUsage(fiveHour: .unknown, weekly: .unknown)
@@ -125,8 +137,25 @@ struct AppUsage {
             // Plan tier is read from the credential store, not the usage
             // response, so a failed fetch shouldn't blank the chip's badge.
             plan: fetched.plan ?? prior.plan,
-            reportedWindows: fetched.reportedWindows ?? prior.reportedWindows
+            reportedWindows: fetched.reportedWindows ?? prior.reportedWindows,
+            scopedWindows: carryForwardScoped(fetched, prior: prior, at: now)
         )
+    }
+
+    /// Scoped windows follow the same carry-forward rule per model name. A
+    /// fetch that parsed successfully but reported no scoped windows means
+    /// the plan has none right now, so nothing is carried.
+    private static func carryForwardScoped(
+        _ fetched: AppUsage, prior: AppUsage, at now: Date
+    ) -> [ScopedWindow] {
+        guard fetched.fiveHour.hasReading || fetched.weekly.hasReading else {
+            return prior.scopedWindows.map { p in
+                ScopedWindow(name: p.name,
+                             usage: carryForward(WindowUsage(usedPercent: 0, resetAt: nil, error: fetched.weekly.error),
+                                                 prior: p.usage, at: now))
+            }
+        }
+        return fetched.scopedWindows
     }
 
     private static func carryForward(

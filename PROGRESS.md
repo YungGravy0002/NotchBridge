@@ -13,6 +13,7 @@ multi-session view, and per-project/per-model cost. All local. See PLAN.md.
 - [ ] Phase 5 — README, privacy doc, Developer ID signed build
 
 ## Done
+- [x] Per-provider peek window setting + model-scoped weekly limits — 2026-09-13 — Claude oauth/usage `limits[]` (kind weekly_scoped, scope.model.display_name e.g. "Fable") now parsed into AppUsage.scopedWindows; extra ring on the Usage page; "Model" option in Settings › Usage display; fixture Tests/Fixtures/claude-oauth-usage.observed.json + claude-usage-parsing-tests (370 PASS total)
 - [x] Phase 1 — 2026-09-13 — Grok/Antigravity/OpenCode + connected-provider architecture removed, Haiku ping removed (credential watcher kept), Sparkle + release.sh + release.yml + Casks removed, renamed to NotchBridge / com.alecmarinov.NotchBridge, CLAUDE.md+AGENTS.md rewritten, scripts/audit-network.sh added. 95 files, −3258/+345. build ✓, run-tests 356 PASS / 0 FAIL, audit-network ✓, 90 s runtime lsof sample caught no sockets (calls are too brief to catch; static allowlist audit is the real gate)
 - [x] Phase 0 — 2026-09-13 — repo YungGravy0002/NotchBridge holds full CodexIsland history (366 commits); unmodified build.sh OK (3m15s, Swift 6.2.4, CLT-only); run-tests.sh: 15 binaries, all pass (pricing-catalog-race-tests segfaulted once under -sanitize=thread, passed 3/3 on rerun — watch for flakiness)
 - [x] All PLAN.md §9 decisions recorded — 2026-09-13 — see PLAN.md §9A
@@ -33,3 +34,4 @@ multi-session view, and per-project/per-model cost. All local. See PLAN.md.
 - Test runner compiles into a mktemp dir; to rerun one test, copy its swiftc line from scripts/run-tests.sh.
 - pricing-catalog-race-tests: `-sanitize=thread` crashes inside the TSan runtime's own init (`__tsan::InitializePlatform → CheckAndProtect → dyld iterate`) on Swift 6.2.4 CLT + macOS 26.5, before any test code runs; passes without TSan. Flag removed from run-tests.sh in Phase 1; re-add when a toolchain update fixes it.
 - OpenCode IS installed on this Mac (~/.opencode/bin, ~/.local/share/opencode/opencode.db). Its reader was removed per PLAN §3.7; usage made through OpenCode is not counted in Cost.
+- Claude oauth/usage response shape is saved as a fixture; `seven_day_opus`/`seven_day_sonnet` are null on this account — the per-model limit lives in `limits[]` instead. Threshold alerts (§3.5a) should target scopedWindows too.

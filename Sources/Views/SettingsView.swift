@@ -636,13 +636,13 @@ struct SettingsView: View {
             }
             SettingsRow(
                 title: "Claude window",
-                subtitle: "Which window the compact pill shows. Auto prefers 5-hour."
+                subtitle: "Which window the compact pill shows. Model = the per-model weekly limit, when reported."
             ) {
                 peekWindowSegmented(for: .claude)
             }
             SettingsRow(
                 title: "Codex window",
-                subtitle: "Which window the compact pill shows. Auto prefers 5-hour."
+                subtitle: "Which window the compact pill shows. Model = the per-model weekly limit, when reported."
             ) {
                 peekWindowSegmented(for: .codex)
             }

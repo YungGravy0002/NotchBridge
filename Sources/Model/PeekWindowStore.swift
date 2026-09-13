@@ -6,12 +6,15 @@ enum PeekWindowPreference: String, CaseIterable {
     case auto
     case fiveHour
     case weekly
+    /// First model-scoped weekly limit the provider reports (e.g. Fable).
+    case model
 
     var label: String {
         switch self {
         case .auto: return "Auto"
         case .fiveHour: return "5-hour"
         case .weekly: return "Weekly"
+        case .model: return "Model"
         }
     }
 }
@@ -50,14 +53,32 @@ final class PeekWindowStore: ObservableObject {
         Binding(get: { self.preference(for: provider) }, set: { self.set($0, for: provider) })
     }
 
+    struct Resolved {
+        let window: WindowUsage
+        let isWeekly: Bool
+        /// Glyph for the pill when no countdown is known: "5h", "7d", or the
+        /// model name for a scoped limit.
+        let lengthGlyph: String
+    }
+
     /// Resolves the window to show. A forced window with no reading falls
     /// back to `auto` so the pill never shows a dash for a window the API
     /// simply doesn't report.
-    func showsWeekly(for provider: IslandProvider, usage: AppUsage) -> Bool {
+    func resolve(for provider: IslandProvider, usage: AppUsage) -> Resolved {
         switch preference(for: provider) {
-        case .fiveHour where usage.fiveHour.hasReading: return false
-        case .weekly where usage.weekly.hasReading: return true
-        default: return usage.peekWindowIsWeekly
+        case .fiveHour where usage.fiveHour.hasReading:
+            return Resolved(window: usage.fiveHour, isWeekly: false, lengthGlyph: "5h")
+        case .weekly where usage.weekly.hasReading:
+            return Resolved(window: usage.weekly, isWeekly: true, lengthGlyph: "7d")
+        case .model:
+            if let scoped = usage.scopedWindows.first(where: { $0.usage.hasReading }) {
+                return Resolved(window: scoped.usage, isWeekly: true, lengthGlyph: scoped.name)
+            }
+            fallthrough
+        default:
+            let weekly = usage.peekWindowIsWeekly
+            return Resolved(window: weekly ? usage.weekly : usage.fiveHour,
+                            isWeekly: weekly, lengthGlyph: weekly ? "7d" : "5h")
         }
     }
 }

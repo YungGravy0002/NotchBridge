@@ -82,6 +82,10 @@ struct ChartsBlock: View {
                                 UsageChartMetric(id: kind.rawValue, label: kind == .fiveHour ? "5h" : "week",
                                                  window: usage.window(kind),
                                                  historyKey: "\(provider.rawValue).\(kind.rawValue)")
+                            } + usage.scopedWindows.map { scoped in
+                                UsageChartMetric(id: "scoped.\(scoped.name)", label: scoped.name,
+                                                 window: scoped.usage,
+                                                 historyKey: "\(provider.rawValue).scoped.\(scoped.name)")
                             })
                     }
                 }
@@ -91,6 +95,7 @@ struct ChartsBlock: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .padding(.horizontal, IslandPanelLayout.columnInset)
         .animation(.chartSwap, value: usage.visibleWindows)
+        .animation(.chartSwap, value: usage.scopedWindows)
     }
 }
 

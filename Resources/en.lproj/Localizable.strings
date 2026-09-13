@@ -349,4 +349,5 @@
 "Weekly" = "Weekly";
 "Claude window" = "Claude window";
 "Codex window" = "Codex window";
-"Which window the compact pill shows. Auto prefers 5-hour." = "Which window the compact pill shows. Auto prefers 5-hour.";
+"Model" = "Model";
+"Which window the compact pill shows. Model = the per-model weekly limit, when reported." = "Which window the compact pill shows. Model = the per-model weekly limit, when reported.";

@@ -244,7 +244,7 @@ Burn-rate forecast; routing hints; compaction pre-warning; reset notifications; 
 | 1 | App name | **Notch Bridge** | Bundle ID `com.alecmarinov.NotchBridge`; repo `YungGravy0002/NotchBridge`; SQLite dir follows bundle ID |
 | 2 | Terminal | Terminal.app + **Claude desktop app + Codex desktop app** (recon) | §3.3 focus target is the *app*, not a terminal: see §3.8 |
 | 3 | Sparkle | Remove (Alec had no preference; recommended default) | Delete Sparkle framework, key, feed URL from `build.sh`; updates = rebuild locally |
-| 4 | Alert style | Animated notch animation **plus** macOS notification, with a **persistent, configurable usage threshold** per window: Claude 5-hour, weekly, and per-model weekly (e.g. Fable/Opus) if the endpoint exposes it; Codex 5-hour and weekly | New §3.5a. Threshold alerts join `waiting_permission` / `rate_limited` as alert sources |
+| 4 | Alert style | Animated notch animation **plus** macOS notification, with a **persistent, configurable usage threshold** per window: Claude 5-hour, weekly, and per-model weekly (verified 2026-09-13: the endpoint exposes it via `limits[]` `weekly_scoped` entries with `scope.model.display_name`, e.g. Fable; parsed into `AppUsage.scopedWindows`); Codex 5-hour and weekly | New §3.5a. Threshold alerts join `waiting_permission` / `rate_limited` as alert sources |
 | 7 | Existing install | None (recon) | Start fresh, no ledger migration |
 | 8 | Signing | Developer ID cert present (recon) | Sign + notarize-optional in Phase 5 |
 | 9 | Build execution | Agent runs builds on this Mac | Gates run by agent, results reported |

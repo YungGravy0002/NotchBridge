@@ -441,7 +441,7 @@ private struct PeekPillOverlay: View {
             tint: tint,
             alignment: isLeft ? .leading : .trailing,
             severity: severity,
-            windowLengthFallback: currentWindowIsWeekly ? "7d" : "5h"
+            windowLengthFallback: resolvedWindow.lengthGlyph
         )
         .padding(isLeft ? .leading : .trailing, 14)
         .padding(.top, topPadding)
@@ -474,13 +474,13 @@ private struct PeekPillOverlay: View {
         }
     }
 
-    private var currentWindow: WindowUsage {
-        currentWindowIsWeekly ? providerUsage.weekly : providerUsage.fiveHour
+    private var resolvedWindow: PeekWindowStore.Resolved {
+        peekWindows.resolve(for: provider, usage: providerUsage)
     }
 
-    private var currentWindowIsWeekly: Bool {
-        peekWindows.showsWeekly(for: provider, usage: providerUsage)
-    }
+    private var currentWindow: WindowUsage { resolvedWindow.window }
+
+    private var currentWindowIsWeekly: Bool { resolvedWindow.isWeekly }
 
     private var severity: AlertEngine.Severity {
         alerts.providerSeverities[provider] ?? .none

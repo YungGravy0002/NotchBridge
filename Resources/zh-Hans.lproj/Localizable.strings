@@ -349,4 +349,5 @@
 "Weekly" = "每周";
 "Claude window" = "Claude 窗口";
 "Codex window" = "Codex 窗口";
-"Which window the compact pill shows. Auto prefers 5-hour." = "紧凑视图显示哪个窗口。自动优先显示 5 小时。";
+"Model" = "模型";
+"Which window the compact pill shows. Model = the per-model weekly limit, when reported." = "紧凑视图显示哪个窗口。模型 = 按模型的每周限额（如有报告）。";

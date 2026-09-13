@@ -192,11 +192,7 @@ enum UsageFetcher {
                    let type = err["type"] as? String, type == "rate_limit_error" {
                     return .rateLimited
                 }
-                return .success(AppUsage(
-                    fiveHour: parseClaudeWindow(obj["five_hour"]),
-                    weekly: parseClaudeWindow(obj["seven_day"]),
-                    plan: plan
-                ))
+                return .success(ClaudeUsageParsing.parse(obj, plan: plan))
             }
             return .otherError("parse error")
         } catch {
@@ -204,23 +200,4 @@ enum UsageFetcher {
         }
     }
 
-    private static func parseClaudeWindow(_ obj: Any?) -> WindowUsage {
-        guard let d = obj as? [String: Any] else { return .unknown }
-        // Anthropic returns `utilization` as a percentage in [0, 100], not a
-        // normalized [0, 1] fraction. An earlier `raw > 1 ? raw / 100 : raw`
-        // heuristic broke the moment the 5h window reset: utilization values
-        // in (0, 1] (e.g. 0.5% used → 0.5) were treated as already-normalized
-        // and rendered as 50%–100%. Always divide by 100; clamp below.
-        let raw = (d["utilization"] as? Double) ?? (d["used_percent"] as? Double) ?? 0
-        let normalized = raw / 100.0
-        var resetAt: Date?
-        if let r = d["resets_at"] as? Double {
-            resetAt = Date(timeIntervalSince1970: r)
-        } else if let s = d["resets_at"] as? String {
-            let f = ISO8601DateFormatter()
-            f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-            resetAt = f.date(from: s) ?? ISO8601DateFormatter().date(from: s)
-        }
-        return WindowUsage(usedPercent: min(1, max(0, normalized)), resetAt: resetAt, error: nil)
-    }
 }

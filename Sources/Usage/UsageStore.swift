@@ -260,7 +260,8 @@ final class UsageStore: ObservableObject {
             fiveHour: fill(.fiveHour, current.fiveHour, prior?.fiveHour),
             weekly: fill(.weekly, current.weekly, prior?.weekly),
             plan: current.plan,
-            reportedWindows: current.reportedWindows
+            reportedWindows: current.reportedWindows,
+            scopedWindows: current.scopedWindows
         )
     }
 

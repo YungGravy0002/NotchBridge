@@ -29,6 +29,16 @@ CLAUDE_CODE_OAUTH_TOKEN="test-stub-token" "$OUT_DIR/resolve-usage-tests"
 
 swiftc \
   -parse-as-library \
+  -o "$OUT_DIR/claude-usage-parsing-tests" \
+  Sources/Model/UsageDisplayModeStore.swift \
+  Sources/Usage/AppUsage.swift \
+  Sources/Usage/ClaudeUsageParsing.swift \
+  Tests/ClaudeUsageParsingTests.swift
+
+"$OUT_DIR/claude-usage-parsing-tests"
+
+swiftc \
+  -parse-as-library \
   -o "$OUT_DIR/notch-height-tests" \
   Sources/Model/NotchInfo.swift \
   Sources/Model/IslandSpacingStore.swift \
@@ -65,6 +75,7 @@ swiftc \
   Sources/Usage/ClaudeCredentials.swift \
   Sources/Usage/CodexResetCredits.swift \
   Sources/Usage/UsageFetcher.swift \
+  Sources/Usage/ClaudeUsageParsing.swift \
   Tests/CodexWindowRoutingTests.swift
 
 "$OUT_DIR/codex-window-routing-tests"
