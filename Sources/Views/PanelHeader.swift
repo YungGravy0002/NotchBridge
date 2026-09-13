@@ -11,7 +11,6 @@ struct PanelHeader: View {
     let notch: NotchInfo
     @ObservedObject private var visibility = ProviderVisibilityStore.shared
     @ObservedObject private var usageStore = UsageStore.shared
-    @ObservedObject private var connections = ProviderConnectionStore.shared
 
     var body: some View {
         HStack(spacing: 0) {
@@ -28,8 +27,7 @@ struct PanelHeader: View {
     }
 
     private func title(_ provider: IslandProvider, isLeft: Bool) -> some View {
-        let plan = provider == .claude ? usageStore.claude.plan
-            : provider == .codex ? usageStore.codex.plan : connections.snapshot(provider).plan
+        let plan = provider == .claude ? usageStore.claude.plan : usageStore.codex.plan
         return HStack(spacing: 8) {
             if isLeft { ProviderMark(provider: provider) }
             else { Spacer(minLength: 0) }

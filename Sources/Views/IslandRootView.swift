@@ -209,7 +209,7 @@ struct IslandRootView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .accessibilityElement(children: .contain)
-        .accessibilityLabel(L10n.tr("CodexIsland panel"))
+        .accessibilityLabel(L10n.tr("NotchBridge panel"))
         .accessibilityHint(accessibilityHintForState)
         .onAppear {
             // Snap to peek on launch when the user has opted into always-show.
@@ -429,8 +429,6 @@ private struct PeekPillOverlay: View {
     let pillsVisible: Bool
 
     @ObservedObject private var visibility = ProviderVisibilityStore.shared
-    @ObservedObject private var connections = ProviderConnectionStore.shared
-    @ObservedObject private var quotaPreferences = ProviderQuotaPreferences.shared
     @ObservedObject private var usageStore = UsageStore.shared
     @ObservedObject private var alerts = AlertEngine.shared
 
@@ -438,11 +436,11 @@ private struct PeekPillOverlay: View {
         let window = currentWindow
         NotchPeekPill(
             usage: window,
-            loading: provider.usesLegacyUsage ? usageStore.loading : connections.loading.contains(provider),
+            loading: usageStore.loading,
             tint: tint,
             alignment: isLeft ? .leading : .trailing,
             severity: severity,
-            windowLengthFallback: provider.usesLegacyUsage ? (currentWindowIsWeekly ? "7d" : "5h") : ""
+            windowLengthFallback: currentWindowIsWeekly ? "7d" : "5h"
         )
         .padding(isLeft ? .leading : .trailing, 14)
         .padding(.top, topPadding)
@@ -472,8 +470,6 @@ private struct PeekPillOverlay: View {
         switch provider {
         case .claude: return usageStore.claude.fiveHour
         case .codex:  return usageStore.codex.peekWindow
-        case .grok, .antigravity:
-            return connections.primary(provider)?.window ?? .unknown
         }
     }
 
@@ -489,10 +485,6 @@ private struct PeekPillOverlay: View {
     private var providerLabel: String { provider.name }
 
     private func peekLabel(for window: WindowUsage, provider: String, weekly: Bool) -> String {
-        if !self.provider.usesLegacyUsage {
-            guard window.hasReading else { return L10n.tr("%@: usage unavailable", provider) }
-            return L10n.tr("%@: %d%%", provider, window.displayedPercentInt(mode: UsageDisplayModeStore.shared.mode))
-        }
         if !window.hasReading {
             return weekly
                 ? L10n.tr("%@: no data for weekly window", provider)

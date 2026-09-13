@@ -93,18 +93,18 @@ enum ClaudeUsageRecovery {
     }
 
     static let help = """
-    Recover saved Claude usage into CodexIsland.
+    Recover saved Claude usage into NotchBridge.
 
     Usage: recover-claude-usage.sh [--apply] [--projects PATH] [--preferences PATH] [--time-zone NAME]
 
     With no options, preview recovery from configured Claude Code and Cowork logs.
     --apply             Save verified counts after backing up the existing usage archive.
     --projects PATH     Also scan an extracted backup's projects folder; repeat for multiple backups.
-    --preferences PATH  Also read an old CodexIsland preferences plist; repeat as needed.
+    --preferences PATH  Also read an old NotchBridge preferences plist; repeat as needed.
     --time-zone NAME    Original timezone of saved daily snapshots, e.g. Asia/Seoul.
     --help              Show this help.
 
-    Existing CodexIsland daily snapshots are checked automatically. Daily recovery
+    Existing NotchBridge daily snapshots are checked automatically. Daily recovery
     requires their original timezone. Only saved counters are used; missing usage
     is never estimated. All counts include cache tokens. No login or network access.
     """
@@ -134,7 +134,7 @@ enum ClaudeUsageRecovery {
                 return 0
             }
             output("Saved. Claude tokens now preserved: \(number(outcome.tokens))")
-            output("Refresh CodexIsland to include the recovered counts.")
+            output("Refresh NotchBridge to include the recovered counts.")
             return 0
         } catch {
             output("Recovery stopped: \(userMessage(for: error))")
@@ -156,7 +156,7 @@ enum ClaudeUsageRecovery {
         }
         let roots = Array(Set((defaultRoots ?? ClaudeLogReader.projectRoots()) + options.projects)).sorted { $0.path < $1.path }
         let ownPreferences = FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent("Library/Preferences/dev.codexisland.CodexIsland.plist")
+            .appendingPathComponent("Library/Preferences/com.alecmarinov.NotchBridge.plist")
         let preferences = Array(Set((defaultPreferences ?? [ownPreferences]) + options.preferences))
             .filter { FileManager.default.fileExists(atPath: $0.path) }.sorted { $0.path < $1.path }
         let now = Date()
@@ -206,7 +206,7 @@ enum ClaudeUsageRecovery {
     }
 
     private static func simulate(events: [TokenEvent], candidates: [Candidate], ledger: UsageLedger, now: Date) throws -> (before: Totals, after: Totals) {
-        let temporary = FileManager.default.temporaryDirectory.appendingPathComponent("codexisland-recovery-\(UUID().uuidString)")
+        let temporary = FileManager.default.temporaryDirectory.appendingPathComponent("notchbridge-recovery-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: temporary, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
         defer { try? FileManager.default.removeItem(at: temporary) }
         let scratch = UsageLedger(url: temporary.appendingPathComponent("preview.sqlite3"))
@@ -304,8 +304,7 @@ enum ClaudeUsageRecovery {
 
     private static func snapshot(ledger: UsageLedger, now: Date) throws -> Totals {
         let claude = try ledger.savedSnapshot(source: .claude)
-        let openCode = try ledger.savedSnapshot(source: .openCode)
-        return try summarize(UsageLedger.Snapshot(events: claude.events + openCode.events.filter { $0.provider == .claude },
+        return try summarize(UsageLedger.Snapshot(events: claude.events,
                                                   saveError: nil, historicalDays: claude.historicalDays), now: now)
     }
 

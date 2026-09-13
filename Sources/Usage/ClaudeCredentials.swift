@@ -61,24 +61,12 @@ enum ClaudeCredentials {
         isReauthActionable(usage.fiveHour.error) && isReauthActionable(usage.weekly.error)
     }
 
-    /// True when BOTH windows carry specifically the expired-token error —
-    /// the one terminal failure a spawned CLI ping can fix. A refresh
-    /// re-issues the same scope set, so `reauthRequiredMessage` (missing
-    /// scope) needs a real `claude /login` instead and must never ping.
+    /// True when BOTH windows carry specifically the expired-token error.
+    /// A refresh re-issues the same scope set, so `reauthRequiredMessage`
+    /// (missing scope) needs a real `claude /login` instead.
     static func isExpiredTokenFailure(_ usage: AppUsage) -> Bool {
         usage.fiveHour.error == tokenExpiredMessage
             && usage.weekly.error == tokenExpiredMessage
-    }
-
-    /// Full gating for the refresh ping: the ping-fixable failure shape AND
-    /// not already attempted this expiry episode AND no re-auth flow owning
-    /// the store. Pure so the test harness can pin the billing-safety
-    /// invariant — a regression that respawned the ping every poll would
-    /// otherwise pass the suite silently.
-    static func shouldSpawnRefreshPing(
-        for usage: AppUsage, alreadyAttempted: Bool, reauthInProgress: Bool
-    ) -> Bool {
-        isExpiredTokenFailure(usage) && !alreadyAttempted && !reauthInProgress
     }
 
     /// Outcome of a single usage-endpoint probe against one token. The fetcher
@@ -405,7 +393,7 @@ enum ClaudeCredentials {
         // Separate breadcrumbs per failure domain: the CLI is the primary
         // path, so its failure must be visible in Console even when the
         // fallback rescues the read.
-        NSLog("CodexIsland: security CLI read failed for Claude credentials; trying in-process SecItem read")
+        NSLog("NotchBridge: security CLI read failed for Claude credentials; trying in-process SecItem read")
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
@@ -416,7 +404,7 @@ enum ClaudeCredentials {
         var result: CFTypeRef?
         let status = SecItemCopyMatching(query as CFDictionary, &result)
         guard status == errSecSuccess, let data = result as? Data else {
-            NSLog("CodexIsland: in-process SecItem read also failed for Claude credentials (OSStatus %d)", status)
+            NSLog("NotchBridge: in-process SecItem read also failed for Claude credentials (OSStatus %d)", status)
             return nil
         }
         return decodeClaudeKeychainBlob(data)
@@ -521,56 +509,7 @@ enum ClaudeCredentials {
             try task.run()
             return true
         } catch {
-            NSLog("CodexIsland: failed to spawn claude auth login: %@", error.localizedDescription)
-            return false
-        }
-    }
-
-    /// Detached `claude -p` ping run only for its side effect: the CLI
-    /// refreshes an expired access token before answering and writes the
-    /// rotated pair back to its credential store, which the credential-store
-    /// watch then picks up within seconds. The app itself stays strictly
-    /// read-only against the token family — the CLI remains the single
-    /// legitimate refresher; this just makes "run claude" happen without the
-    /// user. Needed because desktop-app Claude Code injects its own
-    /// host-refreshed CLAUDE_CODE_OAUTH_TOKEN and never maintains the CLI
-    /// store, so on desktop-only days the keychain token dies ~8h after the
-    /// last terminal run and stays dead.
-    ///
-    /// Cost + safety bounds: haiku model, `--strict-mcp-config` with no
-    /// config (zero MCP servers spawned), no tool grants, cwd pinned to
-    /// $HOME, stdio detached. Reaches only subscription-OAuth logins by
-    /// construction — the expired-token failure only arises from
-    /// `claudeAiOauth` candidates, so console/API-key users can never be
-    /// billed by it.
-    @discardableResult
-    static func spawnTokenRefreshPing() -> Bool {
-        guard let path = locateClaudeBinary() else { return false }
-        let task = Process()
-        task.launchPath = path
-        task.arguments = ["-p", "ok", "--model", "haiku", "--strict-mcp-config"]
-        task.currentDirectoryPath = NSHomeDirectory()
-        // Deterministic auth path: the ping exists to refresh the KEYCHAIN
-        // login and must never bill anything. Drop the env overrides that
-        // would route the CLI to API-key billing or to an injected token
-        // that bypasses the keychain writeback (app launched from a shell
-        // that exports them).
-        var env = ProcessInfo.processInfo.environment
-        for key in ["ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN", "CLAUDE_CODE_OAUTH_TOKEN"] {
-            env.removeValue(forKey: key)
-        }
-        task.environment = env
-        // Null device, not pipes: a pipe nobody drains wedges a chatty child
-        // forever at the 64KB buffer and the Process self-retains — the null
-        // device can't block, so no lingering process to leak.
-        task.standardOutput = FileHandle.nullDevice
-        task.standardError = FileHandle.nullDevice
-        task.standardInput = FileHandle.nullDevice
-        do {
-            try task.run()
-            return true
-        } catch {
-            NSLog("CodexIsland: failed to spawn claude token-refresh ping: %@", error.localizedDescription)
+            NSLog("NotchBridge: failed to spawn claude auth login: %@", error.localizedDescription)
             return false
         }
     }

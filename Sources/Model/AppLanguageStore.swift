@@ -89,7 +89,7 @@ final class AppLanguageStore: ObservableObject {
             try task.run()
             NSApp.terminate(nil)
         } catch {
-            NSLog("CodexIsland: failed to restart app: %@", error.localizedDescription)
+            NSLog("NotchBridge: failed to restart app: %@", error.localizedDescription)
         }
     }
 }

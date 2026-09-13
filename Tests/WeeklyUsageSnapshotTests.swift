@@ -186,19 +186,17 @@ struct WeeklyUsageSnapshotTests {
             .claude: [bucket("2026-09-03 00:00", 99_000), bucket("2026-09-04 00:00", 100),
                       bucket("2026-09-04 15:00", 200), bucket("2026-09-10 00:00", 900),
                       bucket("2026-09-11 00:00", 99_000)],
-            .codex: [bucket("2026-09-05 00:00", 500)],
-            .grok: [bucket("2026-09-05 00:00", 1)],
-            .antigravity: [bucket("2026-09-06 00:00", -500)]
+            .codex: [bucket("2026-09-05 00:00", 500), bucket("2026-09-06 00:00", -500)]
         ]
         let summary = WeeklyUsageSnapshot.make(buckets: buckets, now: now, calendar: calendar)
-        expect(summary.totalTokens == 1701, "all providers and cache tokens counted, boundaries excluded")
+        expect(summary.totalTokens == 1700, "all providers and cache tokens counted, boundaries excluded")
         expect(summary.days.first?.total == 300, "duplicate local-day buckets are combined")
         expect(summary.activeDays == 3, "active days counted across providers without duplication")
         expect(summary.peakDay?.date == date("2026-09-10 00:00"), "today's usage can be the peak day")
         expect(summary.days.count == 7 && summary.days.last?.total == 900
             && summary.dateLabel == "Sep 4 – Sep 10, 2026",
                "the card contains exactly seven days with today's total and the matching date range")
-        expect(summary.providers.map(\.provider) == [.claude, .codex, .grok], "ranked provider mix excludes empty totals")
+        expect(summary.providers.map(\.provider) == [.claude, .codex], "ranked provider mix excludes empty totals")
         expect(summary.percentLabel(for: 1) == "<1%", "small nonzero shares never read as zero")
         expect(summary.providers.reduce(0) { $0 + $1.tokens } == summary.days.reduce(0) { $0 + $1.total },
                "chart, legend and headline share one total")
@@ -230,7 +228,7 @@ struct WeeklyUsageSnapshotTests {
         let demo = WeeklyUsageSnapshot.make(buckets: buckets, now: now, calendar: calendar, isDemo: true, hasPartialRecords: true)
         expect(demo.shareText().contains("Demo week") && demo.shareText().contains("Partial local records"),
                "demo and incomplete sources remain labeled in shared copy")
-        expect(summary.shareText().contains("Includes cache tokens") && summary.shareText().contains("https://codexisland.com"),
+        expect(summary.shareText().contains("Includes cache tokens") && summary.shareText().contains("https://github.com/YungGravy0002/NotchBridge"),
                "share caption defines the metric and provides a make-your-own path")
 
         let oldCache = Data("{\"dayStart\":0,\"tokens\":123,\"billableTokens\":12}".utf8)
@@ -300,8 +298,8 @@ struct WeeklyUsageSnapshotTests {
         expect(priced.shareText(metric: .apiValue).hasPrefix("Four-figure week. My AI usage: $1,280.06 at API rates in 7 days."),
                "caption leads with the same earned title and amount as the image")
         var partialBuckets = pricedBuckets
-        partialBuckets[.grok] = [DailyTokenBucket(dayStart: date("2026-09-06 00:00"), tokens: 500, billableTokens: 500,
-                                                 dollars: 0, unpricedTokens: 500)]
+        partialBuckets[.codex]?.append(DailyTokenBucket(dayStart: date("2026-09-06 00:00"), tokens: 500, billableTokens: 500,
+                                                        dollars: 0, unpricedTokens: 500))
         let partial = WeeklyUsageSnapshot.make(buckets: partialBuckets, now: now, calendar: calendar)
         expect(partial.hasPartialPricing && partial.valueSuffix == "+" && partial.hasPricedUsage,
                "unpriced models produce an explicit lower-bound estimate")
@@ -312,11 +310,11 @@ struct WeeklyUsageSnapshotTests {
             && partial.shareText(metric: .apiValue).contains("not a bill"),
                "money caption preserves both partial-pricing and estimate qualifiers")
         for invalid in [Double.nan, Double.infinity, -1] {
-            let bad = WeeklyUsageSnapshot.make(buckets: [.grok: [DailyTokenBucket(dayStart: date("2026-09-06 00:00"), tokens: 2, billableTokens: 2,
+            let bad = WeeklyUsageSnapshot.make(buckets: [.claude: [DailyTokenBucket(dayStart: date("2026-09-06 00:00"), tokens: 2, billableTokens: 2,
                                                                                  dollars: invalid)]], now: now, calendar: calendar)
             expect(!bad.hasPricedUsage && bad.hasPartialPricing, "invalid prices cannot create a money card")
         }
-        let free = WeeklyUsageSnapshot.make(buckets: [.grok: [DailyTokenBucket(dayStart: date("2026-09-06 00:00"), tokens: 2, billableTokens: 2,
+        let free = WeeklyUsageSnapshot.make(buckets: [.claude: [DailyTokenBucket(dayStart: date("2026-09-06 00:00"), tokens: 2, billableTokens: 2,
                                                                               dollars: 0, unpricedTokens: 0)]], now: now, calendar: calendar)
         expect(free.hasPricedUsage && !free.hasPartialPricing, "known free usage stays distinct from missing pricing")
         expect(WeeklyUsageSnapshot.money(1234.56) == "$1,234.56", "grouped USD amount retains cents")

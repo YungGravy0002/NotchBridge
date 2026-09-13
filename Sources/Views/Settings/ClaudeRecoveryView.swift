@@ -158,7 +158,7 @@ struct ClaudeRecoveryView: View {
 
             DisclosureGroup(L10n.tr("Older backups (optional)"), isExpanded: $backupsExpanded) {
                 VStack(alignment: .leading, spacing: 12) {
-                    Text(L10n.tr("Add an extracted Claude projects folder or an old CodexIsland preferences file."))
+                    Text(L10n.tr("Add an extracted Claude projects folder or an old NotchBridge preferences file."))
                         .font(.system(size: 12)).foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                     HStack(spacing: 10) {
@@ -207,7 +207,7 @@ struct ClaudeRecoveryView: View {
         panel.canChooseFiles = arePreferences
         panel.allowsMultipleSelection = true
         panel.showsHiddenFiles = true
-        panel.title = L10n.tr(arePreferences ? "Choose old CodexIsland preferences" : "Choose a Claude projects folder")
+        panel.title = L10n.tr(arePreferences ? "Choose old NotchBridge preferences" : "Choose a Claude projects folder")
         if arePreferences { panel.allowedContentTypes = [.propertyList] }
         panel.begin { response in
             if response == .OK { model.addSources(panel.urls, arePreferences: arePreferences) }

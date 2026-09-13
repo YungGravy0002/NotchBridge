@@ -3,8 +3,8 @@ set -euo pipefail
 
 cd "$(dirname "$0")"
 
-APP_NAME="CodexIsland"
-BUNDLE_ID="dev.codexisland.CodexIsland"
+APP_NAME="NotchBridge"
+BUNDLE_ID="com.alecmarinov.NotchBridge"
 VERSION="$(cat VERSION)"
 if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
   echo "error: VERSION must be X.Y.Z (got '$VERSION')" >&2
@@ -15,40 +15,17 @@ APP_DIR="$BUILD_DIR/$APP_NAME.app"
 CONTENTS="$APP_DIR/Contents"
 MACOS_DIR="$CONTENTS/MacOS"
 RES_DIR="$CONTENTS/Resources"
-FRAMEWORKS_DIR="$CONTENTS/Frameworks"
-
-# Sparkle framework is vendored under Vendor/Sparkle. The setup script is a
-# no-op once it's in place, so it's safe to run on every build.
-./scripts/setup-sparkle.sh
-SPARKLE_DIR="Vendor/Sparkle"
-SPARKLE_FW="$SPARKLE_DIR/Sparkle.framework"
-
-# Public EdDSA key embedded in Info.plist as SUPublicEDKey. The PUBLIC half
-# of the keypair is safe to commit — it's meant to ship inside distributed
-# apps so Sparkle can verify update signatures. The matching PRIVATE key is
-# in the maintainer's Keychain (and the SPARKLE_ED_PRIVATE_KEY GitHub Secret
-# for CI). To rotate, see docs/SPARKLE.md — DO NOT change this lightly:
-# every existing install verifies updates against this exact public key, and
-# changing it strands them.
-SU_PUBLIC_KEY="bz1gwLBKgIL/Y7OO23o3gaMNIeTpvv/C90F9inr9Quo="
-
-SU_FEED_URL="${SU_FEED_URL:-https://github.com/ericjypark/codex-island/releases/latest/download/appcast.xml}"
 
 rm -rf "$BUILD_DIR"
-mkdir -p "$MACOS_DIR" "$RES_DIR" "$FRAMEWORKS_DIR"
+mkdir -p "$MACOS_DIR" "$RES_DIR"
 
 cp ./Resources/claude_logo.pdf "$RES_DIR/claude_logo.pdf"
 cp ./Resources/openai_logo.pdf "$RES_DIR/openai_logo.pdf"
-cp ./Resources/grok_logo.png "$RES_DIR/grok_logo.png"
 cp ./Resources/ThirdPartyNotices.txt "$RES_DIR/ThirdPartyNotices.txt"
-cp ./Resources/antigravity_logo.png "$RES_DIR/antigravity_logo.png"
-cp ./Resources/codexisland_logo.png "$RES_DIR/codexisland_logo.png"
-cp ./Resources/CodexIsland.icns "$RES_DIR/CodexIsland.icns"
+cp ./Resources/notchbridge_logo.png "$RES_DIR/notchbridge_logo.png"
+cp ./Resources/NotchBridge.icns "$RES_DIR/NotchBridge.icns"
 cp ./scripts/recover-claude-usage.sh "$RES_DIR/recover-claude-usage.sh"
 find ./Resources -maxdepth 1 -type d -name '*.lproj' -exec cp -R {} "$RES_DIR/" \;
-
-# Embed Sparkle.framework. -a preserves the symlinks inside Versions/.
-cp -a "$SPARKLE_FW" "$FRAMEWORKS_DIR/Sparkle.framework"
 
 SWIFT_SOURCES=$(find Sources -name '*.swift' | sort)
 
@@ -65,12 +42,9 @@ for arch_pair in "arm64:$ARM64_BIN" "x86_64:$X86_64_BIN"; do
     -target "${arch}-apple-macos${DEPLOYMENT_TARGET}" \
     -O \
     -parse-as-library \
-    -F "$SPARKLE_DIR" \
     -framework SwiftUI \
     -framework AppKit \
     -framework ServiceManagement \
-    -framework Sparkle \
-    -Xlinker -rpath -Xlinker "@executable_path/../Frameworks" \
     -o "$out" \
     $SWIFT_SOURCES
 done
@@ -84,41 +58,20 @@ cat > "$CONTENTS/Info.plist" <<EOF
 <plist version="1.0">
 <dict>
   <key>CFBundleName</key><string>$APP_NAME</string>
-  <key>CFBundleDisplayName</key><string>CodexIsland</string>
+  <key>CFBundleDisplayName</key><string>NotchBridge</string>
   <key>CFBundleIdentifier</key><string>$BUNDLE_ID</string>
   <key>CFBundleVersion</key><string>$VERSION</string>
   <key>CFBundleShortVersionString</key><string>$VERSION</string>
   <key>CFBundleExecutable</key><string>$APP_NAME</string>
-  <key>CFBundleIconFile</key><string>CodexIsland</string>
+  <key>CFBundleIconFile</key><string>NotchBridge</string>
   <key>CFBundlePackageType</key><string>APPL</string>
   <key>LSMinimumSystemVersion</key><string>$DEPLOYMENT_TARGET</string>
   <key>LSUIElement</key><true/>
   <key>NSHighResolutionCapable</key><true/>
   <key>NSPrincipalClass</key><string>NSApplication</string>
-  <key>NSHumanReadableCopyright</key><string>Copyright © 2026 Eric Park. MIT licensed.</string>
-  <key>SUFeedURL</key><string>$SU_FEED_URL</string>
-  <key>SUPublicEDKey</key><string>$SU_PUBLIC_KEY</string>
-  <key>SUEnableAutomaticChecks</key><true/>
+  <key>NSHumanReadableCopyright</key><string>Copyright © 2026 Eric Park (CodexIsland) and Alec Marinov (NotchBridge). MIT licensed.</string>
 </dict>
 </plist>
 EOF
-
-# Ad-hoc sign Sparkle's embedded XPC services first (they're inside the
-# framework bundle), then the framework itself. The outer .app gets re-signed
-# in release.sh after everything's in place.
-#
-# Sparkle ships both Installer.xpc and Downloader.xpc, but their presence has
-# varied across Sparkle versions. Gate on path existence (so missing helpers
-# don't fail the build) and propagate any real codesign error — silencing
-# them lets "Updater failed to start" reach end users at Check Now time.
-XPC_DIR="$FRAMEWORKS_DIR/Sparkle.framework/Versions/Current/XPCServices"
-for xpc in Installer.xpc Downloader.xpc; do
-  XPC_PATH="$XPC_DIR/$xpc"
-  if [[ -d "$XPC_PATH" ]]; then
-    codesign --force --sign - --timestamp=none \
-      --preserve-metadata=identifier,entitlements,flags "$XPC_PATH"
-  fi
-done
-codesign --force --sign - --timestamp=none "$FRAMEWORKS_DIR/Sparkle.framework"
 
 echo "✓ built $APP_DIR ($VERSION)"

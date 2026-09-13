@@ -4,15 +4,15 @@ import AppKit
 /// The Settings window's brand row. Replaces the empty traffic-light
 /// gutter and the duplicate "NOW" stats from the previous design.
 ///
-/// Three elements left to right: the CodexIsland brand mark (the curly-
-/// brace island glyph that ships in `Resources/codexisland_logo.png`,
+/// Three elements left to right: the NotchBridge brand mark (the curly-
+/// brace island glyph that ships in `Resources/notchbridge_logo.png`,
 /// rendered from a transparent template image), the
 /// app name + tagline, and a version pill on the right.
 struct BrandHeader: View {
     let version: String
 
     private var logo: NSImage? {
-        Bundle.main.url(forResource: "codexisland_logo", withExtension: "png")
+        Bundle.main.url(forResource: "notchbridge_logo", withExtension: "png")
             .flatMap { NSImage(contentsOf: $0) }
     }
 
@@ -21,7 +21,7 @@ struct BrandHeader: View {
             mark
 
             VStack(alignment: .leading, spacing: 2) {
-                Text("CodexIsland")
+                Text("NotchBridge")
                     .font(Typography.brand)
                     .tracking(-0.15)
                     .foregroundStyle(.white.opacity(0.92))

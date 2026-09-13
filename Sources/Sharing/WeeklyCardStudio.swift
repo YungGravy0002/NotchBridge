@@ -385,7 +385,7 @@ struct WeeklyCardStudio: View {
             let data = try WeeklyCardExporter.png(snapshot: snapshot,
                                                   format: format, signature: signature, metric: metric)
             if save {
-                let filename = "CodexIsland-\(period.rawValue)-\(snapshot.filenameDate)-\(metric.rawValue)-\(tier.rawValue)-\(format.rawValue).png"
+                let filename = "NotchBridge-\(period.rawValue)-\(snapshot.filenameDate)-\(metric.rawValue)-\(tier.rawValue)-\(format.rawValue).png"
                 WeeklyCardExporter.save(data, filename: filename, window: WeeklyCardWindowController.shared.window) { result in
                     exporting = false
                     switch result {

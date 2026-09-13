@@ -39,7 +39,7 @@ struct ResolveUsageTests {
         // the 401 re-read/retry) ever touches the developer's real keychain
         // or ~/.claude — a real read would pop the ACL prompt on every test
         // run and make results depend on the machine's login state.
-        let emptyConfigDir = NSTemporaryDirectory() + "codexisland-tests-empty-\(ProcessInfo.processInfo.processIdentifier)"
+        let emptyConfigDir = NSTemporaryDirectory() + "notchbridge-tests-empty-\(ProcessInfo.processInfo.processIdentifier)"
         try? FileManager.default.createDirectory(atPath: emptyConfigDir, withIntermediateDirectories: true)
         setenv("CLAUDE_CONFIG_DIR", emptyConfigDir, 1)
         ClaudeCredentials.keychainCandidatesProvider = { [] }
@@ -128,7 +128,7 @@ struct ResolveUsageTests {
         // ~/.claude/.credentials.json and deleted the keychain item must
         // still get usage. Point CLAUDE_CONFIG_DIR at a fixture and assert
         // the decoded candidate feeds the same selection as keychain items.
-        let fixtureDir = NSTemporaryDirectory() + "codexisland-tests-\(ProcessInfo.processInfo.processIdentifier)"
+        let fixtureDir = NSTemporaryDirectory() + "notchbridge-tests-\(ProcessInfo.processInfo.processIdentifier)"
         try? FileManager.default.createDirectory(atPath: fixtureDir, withIntermediateDirectories: true)
         let fixture = """
         {"claudeAiOauth": {"accessToken": "file-at", "refreshToken": "file-rt", "subscriptionType": "pro"}}
@@ -266,7 +266,7 @@ struct ResolveUsageTests {
         // (old-CLI file mode, or multi-account keychains): the 401 retry
         // excludes the dead token, so selection reaches the fresh credential
         // behind it instead of giving up on the first match.
-        let t7dDir = NSTemporaryDirectory() + "codexisland-tests-t7d-\(ProcessInfo.processInfo.processIdentifier)"
+        let t7dDir = NSTemporaryDirectory() + "notchbridge-tests-t7d-\(ProcessInfo.processInfo.processIdentifier)"
         try? FileManager.default.createDirectory(atPath: t7dDir, withIntermediateDirectories: true)
         FileManager.default.createFile(
             atPath: t7dDir + "/.credentials.json",
@@ -305,7 +305,7 @@ struct ResolveUsageTests {
         // track the file's mtime exactly and be nil with no store at all.
         expect(ClaudeCredentials.credentialStoreFingerprint() == nil,
                "T8 fingerprint is nil with no credential store")
-        let t8Dir = NSTemporaryDirectory() + "codexisland-tests-t8-\(ProcessInfo.processInfo.processIdentifier)"
+        let t8Dir = NSTemporaryDirectory() + "notchbridge-tests-t8-\(ProcessInfo.processInfo.processIdentifier)"
         try? FileManager.default.createDirectory(atPath: t8Dir, withIntermediateDirectories: true)
         setenv("CLAUDE_CONFIG_DIR", t8Dir, 1)
         let t8Path = t8Dir + "/.credentials.json"
@@ -340,7 +340,7 @@ struct ResolveUsageTests {
         // T10 — scope-insufficient (403) gets the same stale-candidate walk
         // as 401: a pre-scope keychain leftover in front of a fresh file
         // credential must not short-circuit to the re-auth panel.
-        let t10Dir = NSTemporaryDirectory() + "codexisland-tests-t10-\(ProcessInfo.processInfo.processIdentifier)"
+        let t10Dir = NSTemporaryDirectory() + "notchbridge-tests-t10-\(ProcessInfo.processInfo.processIdentifier)"
         try? FileManager.default.createDirectory(atPath: t10Dir, withIntermediateDirectories: true)
         FileManager.default.createFile(
             atPath: t10Dir + "/.credentials.json",

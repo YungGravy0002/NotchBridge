@@ -72,9 +72,11 @@ struct UsageLedgerTests {
         expect(abs(summary.dailyTokens.compactMap(\.dollars).reduce(0, +)
                    - corrected.events.reduce(0) { $0 + Pricing.cost(for: $1) }) < 0.000001,
                "API estimates remain derived from separate raw token categories")
-        expect(ledger.retain([event("one")], source: .openCode, now: now).events.count == 1,
+        let multiSourceLedger = UsageLedger(url: root.appendingPathComponent("multi-source.sqlite3"))
+        _ = multiSourceLedger.retain([event("one")], source: .claude, now: now)
+        expect(multiSourceLedger.retain([event("one")], source: .codex, now: now).events.count == 1,
                "independent clients with matching IDs stay separate")
-        expect(ledger.retain([event("one", provider: .codex)], source: .openCode, now: now).events.count == 2,
+        expect(multiSourceLedger.retain([event("one", provider: .codex)], source: .codex, now: now).events.count == 2,
                "provider identity prevents cross-provider collisions")
         let fallback = TokenEvent(provider: .claude, timestamp: now, model: "unknown",
                                   inputTokens: 1, outputTokens: 1, cacheCreationTokens: 0, cacheReadTokens: 0)
@@ -90,12 +92,12 @@ struct UsageLedgerTests {
         original.recordAliases = ["same-model-call"]
         var fork = event("fork")
         fork.recordAliases = original.recordAliases
-        _ = forkLedger.retain([original], source: .openCode, now: now)
-        expect(forkLedger.retain([fork], source: .openCode, now: now).events.count == 1,
+        _ = forkLedger.retain([original], source: .codex, now: now)
+        expect(forkLedger.retain([fork], source: .codex, now: now).events.count == 1,
                "a surviving fork cannot recount a deleted original message")
         var updatedFork = event("fork", input: 200)
         updatedFork.recordAliases = ["updated-model-call"]
-        let forkResult = forkLedger.retain([updatedFork], source: .openCode, now: now)
+        let forkResult = forkLedger.retain([updatedFork], source: .codex, now: now)
         expect(forkResult.events.count == 1 && total(forkResult.events) == 650,
                "aliases retain call identity when a fork's usage is corrected")
 
@@ -110,7 +112,7 @@ struct UsageLedgerTests {
         expect(total(correctedLater.events) == 1050, "a newer correction can still reduce a previously recorded count")
 
         let invalid = ledger.retain([event("negative", input: -1), event("future", date: later.addingTimeInterval(1)),
-                                     event("missing-date", date: .distantPast)], source: .grok, now: later)
+                                     event("missing-date", date: .distantPast)], source: .codex, now: later)
         expect(invalid.events.isEmpty, "invalid and future records do not create fabricated history")
         try execute(url, sql: "CREATE TRIGGER reject_fixture BEFORE INSERT ON usage_events WHEN NEW.input_tokens=9999 BEGIN SELECT RAISE(ABORT, 'fixture'); END;")
         let beforeFailure = try count(url)
@@ -142,21 +144,22 @@ struct UsageLedgerTests {
         }
         expect(try count(concurrentURL) == 8, "independent writers preserve each other's counts")
 
-        let logs = root.appendingPathComponent("grok-session")
+        let logs = root.appendingPathComponent("codex-session")
         try FileManager.default.createDirectory(at: logs, withIntermediateDirectories: true)
         let line = """
-            {"timestamp":"2026-09-08T17:00:00Z","_meta":{"promptId":"call-1","modelUsage":{"grok-test":{"inputTokens":5000,"outputTokens":200,"cacheReadTokens":4000,"cacheCreationTokens":0}}}}
+            {"type":"turn_context","payload":{"model":"gpt-5.4"}}
+            {"type":"event_msg","timestamp":"2026-09-08T17:00:00Z","payload":{"type":"token_count","info":{"last_token_usage":{"input_tokens":5000,"cached_input_tokens":4000,"output_tokens":200}}}}
             """
-        let sourceFile = logs.appendingPathComponent("updates.jsonl")
+        let sourceFile = logs.appendingPathComponent("rollout-integration.jsonl")
         try Data(line.utf8).write(to: sourceFile)
         let integrationURL = root.appendingPathComponent("integration.sqlite3")
-        let captured = UsageLedger(url: integrationURL).retain(GrokLogReader.scan(lookbackDays: nil, root: logs, now: later).events,
-                                                              source: .grok, now: later)
+        let captured = UsageLedger(url: integrationURL).retain(CodexLogReader.scan(lookbackDays: nil, root: logs),
+                                                              source: .codex, now: later)
         expect(captured.saveError == nil && total(captured.events) == 5200, "real provider parser archives the recorded token counts")
         try FileManager.default.removeItem(at: sourceFile)
-        let rescanned = GrokLogReader.scan(lookbackDays: nil, root: logs, now: later)
-        expect(rescanned.events.isEmpty, "provider fixture reproduces source-log deletion")
-        let retained = UsageLedger(url: integrationURL).retain(rescanned.events, source: .grok, now: later)
+        let rescanned = CodexLogReader.scan(lookbackDays: nil, root: logs)
+        expect(rescanned.isEmpty, "provider fixture reproduces source-log deletion")
+        let retained = UsageLedger(url: integrationURL).retain(rescanned, source: .codex, now: later)
         let afterDeletion = CostSummary.summarize(events: retained.events, now: later, includeAllHistory: true)
         expect(afterDeletion.dailyTokens.reduce(0) { $0 + $1.tokens } == 5200,
                "provider-log deletion and archive reopen leave chart totals intact")

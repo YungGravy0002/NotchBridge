@@ -4,7 +4,7 @@ import SQLite3
 
 final class UsageLedger {
     enum Source: String, CaseIterable {
-        case claude, codex, openCode, grok, antigravity
+        case claude, codex
     }
 
     struct Snapshot {
@@ -27,7 +27,7 @@ final class UsageLedger {
     static let saveErrorMessage = "Usage history could not be saved. Check available disk space and try refreshing."
     static var defaultURL: URL {
         FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent("Library/Application Support/dev.codexisland.CodexIsland", isDirectory: true)
+            .appendingPathComponent("Library/Application Support/com.alecmarinov.NotchBridge", isDirectory: true)
             .appendingPathComponent("usage-history.sqlite3")
     }
 
@@ -154,7 +154,6 @@ final class UsageLedger {
 
     private static func readClaudeHistory(database: OpaquePointer) throws -> Snapshot {
         let events = try read(source: .claude, database: database)
-            + read(source: .openCode, database: database).filter { $0.provider == .claude }
         let days = try readHistoricalDays(source: .claude, database: database)
         var total = 0
         for count in events.flatMap({ [$0.inputTokens, $0.outputTokens, $0.cacheCreationTokens, $0.cacheReadTokens] })

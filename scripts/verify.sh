@@ -1,14 +1,14 @@
 #!/bin/bash
 # Build and smoke-launch the app for 1 second, then kill it.
 # Used after every commit to confirm the binary launches without crashing.
-# (CodexIsland is a forever-running background overlay, so we can't just `./binary`.)
+# (NotchBridge is a forever-running background overlay, so we can't just `./binary`.)
 
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
 ./build.sh
 
-BIN="./build/CodexIsland.app/Contents/MacOS/CodexIsland"
+BIN="./build/NotchBridge.app/Contents/MacOS/NotchBridge"
 "$BIN" >/dev/null 2>&1 &
 PID=$!
 sleep 1

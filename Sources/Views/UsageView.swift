@@ -17,12 +17,10 @@ struct UsageView: View {
             hairline
             if let right = visibility.right {
                 providerBlock(right)
-            } else if let legacy = visibility.left.legacy {
-                PerModelBreakdown(provider: legacy, metric: .tokens)
+            } else {
+                PerModelBreakdown(provider: visibility.left, metric: .tokens)
                     .frame(maxWidth: .infinity, alignment: .top)
                     .padding(.horizontal, IslandPanelLayout.columnInset)
-            } else {
-                Color.clear.frame(maxWidth: .infinity)
             }
         }
         .frame(height: IslandPanelLayout.tileHeight)
@@ -32,12 +30,8 @@ struct UsageView: View {
 
     @ViewBuilder
     private func providerBlock(_ provider: IslandProvider) -> some View {
-        if let legacy = provider.legacy {
-            ChartsBlock(color: provider.color, usage: provider == .claude ? store.claude : store.codex,
-                        style: style, seed: provider == .claude ? 1 : 3, provider: legacy)
-        } else {
-            ConnectedUsageBlock(provider: provider)
-        }
+        ChartsBlock(color: provider.color, usage: provider == .claude ? store.claude : store.codex,
+                    style: style, seed: provider == .claude ? 1 : 3, provider: provider)
     }
 
     private var hairline: some View {

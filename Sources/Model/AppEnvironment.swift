@@ -9,8 +9,8 @@ enum AppMode {
 enum AppEnvironment {
     static let current: AppMode = {
         let env = ProcessInfo.processInfo.environment
-        if env["CODEXISLAND_DEMO"] == "1" { return .demo }
-        if env["CODEXISLAND_DEBUG"] == "1" { return .debug }
+        if env["NOTCHBRIDGE_DEMO"] == "1" { return .demo }
+        if env["NOTCHBRIDGE_DEBUG"] == "1" { return .debug }
         return .normal
     }()
 

@@ -1,19 +1,19 @@
 #!/bin/bash
-# Regenerate Resources/CodexIsland.icns + Resources/codexisland_logo.png from
+# Regenerate Resources/NotchBridge.icns + Resources/notchbridge_logo.png from
 # the canonical Assets/ source files. Run after editing any of:
-#   - Assets/codexisland-app-icon-light.png  (the in-Dock icon, default source)
-#   - Assets/codexisland-app-icon-dark.png   (alternate; SOURCE= override)
-#   - Assets/codexisland-logo.png            (the brand glyph used in Settings)
+#   - Assets/notchbridge-app-icon-light.png  (the in-Dock icon, default source)
+#   - Assets/notchbridge-app-icon-dark.png   (alternate; SOURCE= override)
+#   - Assets/notchbridge-logo.png            (the brand glyph used in Settings)
 #
-# Override: SOURCE=Assets/codexisland-app-icon-dark.png ./scripts/make-icns.sh
+# Override: SOURCE=Assets/notchbridge-app-icon-dark.png ./scripts/make-icns.sh
 
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-ICON_SOURCE="${SOURCE:-Assets/codexisland-app-icon-light.png}"
-GLYPH_SOURCE="Assets/codexisland-logo.png"
-ICNS_OUT="Resources/CodexIsland.icns"
-GLYPH_OUT="Resources/codexisland_logo.png"
+ICON_SOURCE="${SOURCE:-Assets/notchbridge-app-icon-light.png}"
+GLYPH_SOURCE="Assets/notchbridge-logo.png"
+ICNS_OUT="Resources/NotchBridge.icns"
+GLYPH_OUT="Resources/notchbridge_logo.png"
 
 for f in "$ICON_SOURCE" "$GLYPH_SOURCE"; do
   if [[ ! -f "$f" ]]; then
@@ -23,7 +23,7 @@ for f in "$ICON_SOURCE" "$GLYPH_SOURCE"; do
 done
 
 TMP=$(mktemp -d)
-ICONSET="$TMP/CodexIsland.iconset"
+ICONSET="$TMP/NotchBridge.iconset"
 mkdir "$ICONSET"
 
 # Ten sizes the macOS HIG asks for. iconutil bundles them into a single .icns.

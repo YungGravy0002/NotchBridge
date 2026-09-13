@@ -19,7 +19,6 @@ struct PanelFooter: View {
     @ObservedObject private var costPref = CostStylePref.shared
     @ObservedObject private var screenPref = ScreenPref.shared
     @ObservedObject private var visibility = ProviderVisibilityStore.shared
-    @ObservedObject private var connections = ProviderConnectionStore.shared
     @ObservedObject private var usageStore = UsageStore.shared
     @ObservedObject private var costStore = CostStore.shared
     @ObservedObject private var currencyStore = CurrencyStore.shared
@@ -126,7 +125,7 @@ struct PanelFooter: View {
 
     private var activeLoading: Bool {
         switch screenPref.screen {
-        case .usage: return usageStore.loading || visibility.selected.contains { connections.loading.contains($0) }
+        case .usage: return usageStore.loading
         case .cost, .overview: return visibility.selected.contains { costStore.isLoading($0) }
         }
     }
@@ -134,9 +133,7 @@ struct PanelFooter: View {
     private var activeLastUpdated: Date? {
         switch screenPref.screen {
         case .usage:
-            let dates = visibility.selected.compactMap { provider in
-                provider.usesLegacyUsage ? usageStore.lastUpdated : connections.snapshot(provider).updatedAt
-            }
+            let dates = visibility.selected.compactMap { _ in usageStore.lastUpdated }
             return dates.count == visibility.selected.count ? dates.min() : nil
         case .cost, .overview:
             let dates = visibility.selected.compactMap { costStore.updatedAt($0) }
@@ -147,12 +144,6 @@ struct PanelFooter: View {
     private var localNotice: String? {
         guard screenPref.screen != .usage else { return nil }
         return visibility.selected.compactMap { costStore.localNotices[$0] }.first
-    }
-
-    private var connectionNeedsAttention: Bool {
-        screenPref.screen == .usage && visibility.selected.contains {
-            !$0.usesLegacyUsage && connections.snapshot($0).updatedAt == nil
-        }
     }
 
     @ViewBuilder
@@ -169,9 +160,6 @@ struct PanelFooter: View {
                         .foregroundStyle(.white.opacity(0.55))
                 } else if localNotice != nil {
                     Text(AppEnvironment.isDemo ? "Demo data" : "Check local records")
-                        .font(Typography.label).foregroundStyle(.white.opacity(0.55))
-                } else if connectionNeedsAttention {
-                    Text(L10n.tr("Check connection"))
                         .font(Typography.label).foregroundStyle(.white.opacity(0.55))
                 } else if let updated = activeLastUpdated {
                     Text(L10n.tr("Synced"))
@@ -216,9 +204,6 @@ struct PanelFooter: View {
     private func triggerRefresh() {
         switch screenPref.screen {
         case .usage:
-            for provider in visibility.selected where !provider.usesLegacyUsage {
-                connections.refresh(provider, manually: true)
-            }
             usageStore.refresh()
         case .cost, .overview: costStore.refresh()
         }
@@ -227,7 +212,6 @@ struct PanelFooter: View {
     private var liveStatusSpoken: String {
         if activeLoading { return L10n.tr("Syncing") }
         if let localNotice { return localNotice }
-        if connectionNeedsAttention { return L10n.tr("Check connection") }
         if let updated = activeLastUpdated { return L10n.tr("Synced %@", relative(updated)) }
         return L10n.tr("Idle")
     }

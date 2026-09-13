@@ -5,15 +5,15 @@ Notch app (fork of CodexIsland) showing Claude Code + Codex quota, live per-sess
 multi-session view, and per-project/per-model cost. All local. See PLAN.md.
 
 ## Now
-- [ ] Phase 1 — strip Grok/Antigravity/OpenCode, remove Haiku ping, new bundle ID com.alecmarinov.NotchBridge, remove Sparkle
+- [ ] Phase 2 — payload capture first (dump-only hooks for one Claude + one Codex session → Tests/Fixtures), then HookServer, SessionStore, installer
 
 ## Backlog
-- [ ] Phase 2 — HookServer + SessionStore + installer (payload capture first)
 - [ ] Phase 3 — multi-session UI, click-to-switch desktop apps (§3.8), Terminal.app focus
 - [ ] Phase 4 — per-project / per-model cost
 - [ ] Phase 5 — README, privacy doc, Developer ID signed build
 
 ## Done
+- [x] Phase 1 — 2026-09-13 — Grok/Antigravity/OpenCode + connected-provider architecture removed, Haiku ping removed (credential watcher kept), Sparkle + release.sh + release.yml + Casks removed, renamed to NotchBridge / com.alecmarinov.NotchBridge, CLAUDE.md+AGENTS.md rewritten, scripts/audit-network.sh added. 95 files, −3258/+345. build ✓, run-tests 356 PASS / 0 FAIL, audit-network ✓, 90 s runtime lsof sample caught no sockets (calls are too brief to catch; static allowlist audit is the real gate)
 - [x] Phase 0 — 2026-09-13 — repo YungGravy0002/NotchBridge holds full CodexIsland history (366 commits); unmodified build.sh OK (3m15s, Swift 6.2.4, CLT-only); run-tests.sh: 15 binaries, all pass (pricing-catalog-race-tests segfaulted once under -sanitize=thread, passed 3/3 on rerun — watch for flakiness)
 - [x] All PLAN.md §9 decisions recorded — 2026-09-13 — see PLAN.md §9A
 - [x] Research + plan v0.1 — 2026-09-13 — PLAN.md saved here
@@ -31,3 +31,5 @@ multi-session view, and per-project/per-model cost. All local. See PLAN.md.
 - Astra (GPT-6 orchestrator) launches the `claude` CLI; Claude launches Codex via `codex exec` from Bash. Lineage env vars inherit naturally.
 - Repo layout: NotchBridge/ (git clone) sits inside the 'Notch Usage' folder; PLAN.md/PROGRESS.md are mirrored in both places — edit the repo copy and cp up.
 - Test runner compiles into a mktemp dir; to rerun one test, copy its swiftc line from scripts/run-tests.sh.
+- pricing-catalog-race-tests: `-sanitize=thread` crashes inside the TSan runtime's own init (`__tsan::InitializePlatform → CheckAndProtect → dyld iterate`) on Swift 6.2.4 CLT + macOS 26.5, before any test code runs; passes without TSan. Flag removed from run-tests.sh in Phase 1; re-add when a toolchain update fixes it.
+- OpenCode IS installed on this Mac (~/.opencode/bin, ~/.local/share/opencode/opencode.db). Its reader was removed per PLAN §3.7; usage made through OpenCode is not counted in Cost.

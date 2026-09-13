@@ -1,13 +1,13 @@
-# Contributing to CodexIsland
+# Contributing to NotchBridge
 
-Thanks for being here. CodexIsland is small enough that any contribution moves the project meaningfully — bug reports especially. Here's how to keep things smooth.
+Thanks for being here. NotchBridge is small enough that any contribution moves the project meaningfully — bug reports especially. Here's how to keep things smooth.
 
 ## Reporting bugs
 
 Open an issue. Useful things to include:
 
 - macOS version (`sw_vers`) — particularly if the notch detection or window placement is off.
-- Output of `defaults read dev.codexisland.CodexIsland` if it's a settings-related bug.
+- Output of `defaults read com.alecmarinov.NotchBridge` if it's a settings-related bug.
 - A short description of what you expected vs. what happened.
 - Whether Claude / Codex actually has data populated in the panel — `auth required` errors usually mean the upstream creds aren't where we expect them.
 
@@ -17,10 +17,10 @@ If `/api/oauth/usage` or `/wham/usage` starts returning unexpected fields, both 
 
 ```sh
 ./build.sh
-open build/CodexIsland.app
+open build/NotchBridge.app
 ```
 
-`./scripts/verify.sh` builds and smoke-launches the binary for one second — useful in pre-commit hooks since the app runs forever and a normal `./build.sh && ./build/.../CodexIsland` would block.
+`./scripts/verify.sh` builds and smoke-launches the binary for one second — useful in pre-commit hooks since the app runs forever and a normal `./build.sh && ./build/.../NotchBridge` would block.
 
 No Xcode project, no SwiftPM. Just `swiftc Sources/**/*.swift`.
 

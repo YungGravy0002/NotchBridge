@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Locked type scale for CodexIsland. Eight tokens across six visual tiers,
+/// Locked type scale for NotchBridge. Eight tokens across six visual tiers,
 /// no half-points. Hero numerics use SF Mono so the display digits — which
 /// are the product's brand — have a developer-tool character that SF Pro
 /// with `monospacedDigit()` can't deliver.

@@ -111,5 +111,6 @@ final class ClaudeRecoveryModel: ObservableObject {
 }
 
 extension Notification.Name {
+    // TODO(notchbridge): legacy key name
     static let codexIslandUsageHistoryRecovered = Notification.Name("CodexIsland.usageHistoryRecovered")
 }

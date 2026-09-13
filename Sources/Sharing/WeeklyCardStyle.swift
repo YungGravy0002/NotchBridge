@@ -50,12 +50,8 @@ enum WeeklyCardTheme {
         switch (self, provider) {
         case (.paper, .claude): return Color(red: 0.75, green: 0.30, blue: 0.20)
         case (.paper, .codex): return Color(red: 0.12, green: 0.38, blue: 0.79)
-        case (.paper, .antigravity): return Color(red: 0.47, green: 0.32, blue: 0.71)
-        case (.paper, .grok): return Color(red: 0.19, green: 0.30, blue: 0.30)
         case (_, .claude): return Color(red: 0.96, green: 0.57, blue: 0.42)
         case (_, .codex): return Color(red: 0.52, green: 0.80, blue: 0.98)
-        case (_, .antigravity): return Color(red: 0.76, green: 0.66, blue: 0.98)
-        case (_, .grok): return Color(red: 0.87, green: 0.96, blue: 0.73)
         }
     }
 }

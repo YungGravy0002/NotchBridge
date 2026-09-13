@@ -48,7 +48,6 @@ struct CostTile: View {
 
     @ObservedObject private var stylePref = CostStylePref.shared
     @ObservedObject private var usageStore = UsageStore.shared
-    @ObservedObject private var connections = ProviderConnectionStore.shared
     @ObservedObject private var tokenMode = TokenCountModeStore.shared
     @ObservedObject private var currencyStore = CurrencyStore.shared
 
@@ -288,17 +287,10 @@ struct CostTile: View {
     /// or OpenAI's "plan_type" so each provider's bar reflects its actual
     /// plan: Claude Pro $20 / Max $200, Codex Plus $20 / Pro $100 or $200.
     private var subscriptionUSD: Double? {
-        // Illustrative demo baselines; do not infer live subscription pricing.
-        if AppEnvironment.isDemo {
-            if provider == .grok { return 30 }
-            if provider == .antigravity { return 19.99 }
-        }
         let plan: String? = {
             switch provider {
             case .claude: return usageStore.claude.plan?.lowercased()
             case .codex:  return usageStore.codex.plan?.lowercased()
-            case .antigravity: return connections.snapshot(.antigravity).plan?.lowercased()
-            case .grok: return connections.snapshot(.grok).plan?.lowercased()
             }
         }()
         guard let plan else { return nil }
@@ -308,7 +300,6 @@ struct CostTile: View {
         case (.codex, "plus"): return 20
         case (.codex, "prolite"): return 100
         case (.codex, "pro"):  return 200
-        case (.antigravity, "google ai pro"): return 19.99
         default: return nil
         }
     }
@@ -317,16 +308,10 @@ struct CostTile: View {
     /// label under the plan bar so the user always knows what the
     /// comparison is anchored to.
     private var planLabel: String? {
-        if AppEnvironment.isDemo {
-            if provider == .grok { return "SuperGrok" }
-            if provider == .antigravity { return "AI Pro" }
-        }
         let plan: String? = {
             switch provider {
             case .claude: return usageStore.claude.plan?.lowercased()
             case .codex:  return usageStore.codex.plan?.lowercased()
-            case .antigravity: return connections.snapshot(.antigravity).plan?.lowercased()
-            case .grok: return connections.snapshot(.grok).plan?.lowercased()
             }
         }()
         guard let plan else { return nil }
@@ -336,7 +321,6 @@ struct CostTile: View {
         case (.codex, "plus"): return "Plus"
         case (.codex, "prolite"): return "Pro"
         case (.codex, "pro"):  return "Pro"
-        case (.antigravity, "google ai pro"): return "AI Pro"
         default: return nil
         }
     }

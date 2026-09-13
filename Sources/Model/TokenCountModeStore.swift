@@ -2,7 +2,7 @@ import Foundation
 
 /// How the cost screen sums tokens for the TOKENS hero. Anthropic's claude.ai
 /// stats panel reports billable tokens only (input + output), while ccusage
-/// — and CodexIsland by default — sum every token type that crossed the
+/// — and NotchBridge by default — sum every token type that crossed the
 /// wire, including cache reads. The two diverge by ~10× in normal Claude
 /// Code usage because cache_read_input_tokens dwarfs the rest.
 enum TokenCountMode: String, CaseIterable {

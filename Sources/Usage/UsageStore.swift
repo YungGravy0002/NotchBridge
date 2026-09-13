@@ -39,13 +39,6 @@ final class UsageStore: ObservableObject {
     private var credWatchTask: Task<Void, Never>?
     private var cooldownRetryTask: Task<Void, Never>?
     private var sleepWakeObservers: [NSObjectProtocol] = []
-    /// One CLI refresh ping per expiry episode: armed when the expired-token
-    /// failure first lands, reset by the next successful Claude fetch. If the
-    /// ping can't fix the store (no CLI, revoked refresh token), the flag
-    /// stays set so we never spawn again — the re-auth panel remains the
-    /// fallback.
-    private var tokenRefreshPingAttempted = false
-
     /// Anthropic's /api/oauth/usage is aggressively rate-limited per token.
     /// `RefreshIntervalStore` enforces a 5-minute floor (300/900/1800).
     private var pollInterval: TimeInterval {
@@ -66,13 +59,12 @@ final class UsageStore: ObservableObject {
     }
 
     func refresh() {
-        ProviderConnectionStore.shared.refreshSelected()
         if loading { return }
         // Demo mode for screen recordings: skip the network entirely and
         // inject hand-tuned values that read as "real, healthy heavy-user
         // data". Reset times are recomputed each refresh so the countdowns
         // tick down naturally on camera. Off by default — only fires when
-        // CODEXISLAND_DEMO=1 is set in the launching env.
+        // NOTCHBRIDGE_DEMO=1 is set in the launching env.
         if AppEnvironment.isDemo {
             let now = Date()
             self.claude = AppUsage(
@@ -177,7 +169,7 @@ final class UsageStore: ObservableObject {
             if let cl {
                 if UsageStore.isRateLimited(cl) {
                     self.claudeCooldownUntil = Date().addingTimeInterval(UsageStore.rateLimitCooldown)
-                    NSLog("CodexIsland: Claude usage rate-limited; skipping Claude fetches for %.0fs", UsageStore.rateLimitCooldown)
+                    NSLog("NotchBridge: Claude usage rate-limited; skipping Claude fetches for %.0fs", UsageStore.rateLimitCooldown)
                     self.scheduleCooldownRetry()
                 } else {
                     self.claudeCooldownUntil = nil
@@ -205,23 +197,9 @@ final class UsageStore: ObservableObject {
                 // moment it changes.
                 if terminal {
                     self.watchCredentialStore()
-                    // The one terminal failure a CLI ping can fix: an expired
-                    // token in a store nothing else maintains (desktop-app
-                    // Claude Code brings its own host-refreshed token and
-                    // never writes the CLI store). The ping's writeback is
-                    // what the credential watch then catches.
-                    if ClaudeCredentials.shouldSpawnRefreshPing(
-                        for: cl,
-                        alreadyAttempted: self.tokenRefreshPingAttempted,
-                        reauthInProgress: self.claudeReauthInProgress
-                    ) {
-                        self.tokenRefreshPingAttempted = true
-                        ClaudeCredentials.spawnTokenRefreshPing()
-                    }
                 } else if cl.fiveHour.error == nil || cl.weekly.error == nil {
                     self.credWatchTask?.cancel()
                     self.credWatchTask = nil
-                    self.tokenRefreshPingAttempted = false
                 }
             }
             if let codexResetCredits {
@@ -384,11 +362,9 @@ final class UsageStore: ObservableObject {
                         self?.lastUpdated = Date()
                         self?.claudeReauthInProgress = false
                         // This poll owned the store write — retire the
-                        // credential watch (its baseline is stale now) and
-                        // re-arm the ping for the next expiry episode.
+                        // credential watch (its baseline is stale now).
                         self?.credWatchTask?.cancel()
                         self?.credWatchTask = nil
-                        self?.tokenRefreshPingAttempted = false
                     }
                     return
                 }

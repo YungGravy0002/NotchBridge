@@ -9,17 +9,16 @@ it when an original log disappears.
 ## Capture
 
 The existing local refresh reads all currently available records from Claude
-Code, locally mirrored Claude Cowork sessions, Codex, OpenCode, Grok, and
-Antigravity. Parser caches still avoid re-reading unchanged Claude and Codex
-files. Capture runs at launch and on the existing refresh schedule; it does
+Code, locally mirrored Claude Cowork sessions, and Codex. Parser
+caches still avoid re-reading unchanged Claude and Codex files. Capture runs at launch and on the existing refresh schedule; it does
 not add network requests or change quota polling intervals.
 
 Each call keeps its provider, model, timestamp, disjoint input/output/cache
 counts, and a hashed identity. Calls with stable provider IDs update the same
 entry across scans. Codex and older Claude records use the session filename,
-timestamp, and repeated-timestamp ordinal. OpenCode's existing duplicate-call
-fingerprints are retained as aliases so a surviving fork does not recount an
-already saved call. Claude streaming repeats use a real recorded row whose
+timestamp, and repeated-timestamp ordinal. Duplicate-call fingerprints are
+retained as aliases so a surviving fork does not recount an already saved
+call. Claude streaming repeats use a real recorded row whose
 counts dominate the earlier row, never a synthesized sum of multiple rows.
 
 Writes use SQLite transactions, WAL, and full synchronization. Separate

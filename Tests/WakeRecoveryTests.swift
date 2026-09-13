@@ -133,7 +133,7 @@ struct WakeRecoveryTests {
             "a 429 pair is transient — it must keep carrying, never wipe"
         )
 
-        // MARK: refresh-ping gating — only a plain expiry is ping-fixable
+        // MARK: expired-token classification
 
         let reauthNeeded = pair(
             errored(ClaudeCredentials.reauthRequiredMessage),
@@ -141,39 +141,15 @@ struct WakeRecoveryTests {
         )
         expect(
             ClaudeCredentials.isExpiredTokenFailure(tokenExpired),
-            "an expired-token pair is what the CLI refresh ping can fix"
+            "an expired-token pair is classified as a plain expiry"
         )
         expect(
             !ClaudeCredentials.isExpiredTokenFailure(reauthNeeded),
-            "a missing-scope pair must never ping — refresh re-issues the same scopes"
+            "a missing-scope pair is not a plain expiry — refresh re-issues the same scopes"
         )
         expect(
             !ClaudeCredentials.isExpiredTokenFailure(rateLimited),
-            "a 429 pair must never ping — it would feed the tripped limiter"
-        )
-
-        // The full gate the store consults before spawning — the billing
-        // safety invariant. A regression that respawned the ping every poll
-        // (silently spending quota) has to fail here.
-        expect(
-            ClaudeCredentials.shouldSpawnRefreshPing(
-                for: tokenExpired, alreadyAttempted: false, reauthInProgress: false),
-            "fresh expiry episode with no re-auth running spawns the one ping"
-        )
-        expect(
-            !ClaudeCredentials.shouldSpawnRefreshPing(
-                for: tokenExpired, alreadyAttempted: true, reauthInProgress: false),
-            "an episode that already pinged never pings again"
-        )
-        expect(
-            !ClaudeCredentials.shouldSpawnRefreshPing(
-                for: tokenExpired, alreadyAttempted: false, reauthInProgress: true),
-            "the re-auth flow owns the store — no ping under it"
-        )
-        expect(
-            !ClaudeCredentials.shouldSpawnRefreshPing(
-                for: rateLimited, alreadyAttempted: false, reauthInProgress: false),
-            "only the expired-token shape can ever reach the spawn"
+            "a 429 pair is not a plain expiry"
         )
 
         // After the wipe, the next poll's 429 has nothing to carry: both

@@ -287,7 +287,7 @@ struct WeeklyUsageSnapshot {
             API-rate estimate (USD), not a bill. Tokens include cache.\(caveat)\(pricing)
 
             \(valueChallenge)
-            https://codexisland.com
+            https://github.com/YungGravy0002/NotchBridge
             """
         }
         return """
@@ -296,7 +296,7 @@ struct WeeklyUsageSnapshot {
         \(dateLabel) · Includes cache tokens.\(caveat)
 
         \(period == .lastSevenDays ? "What does your week look like?" : "What does your AI usage look like?")
-        Make your card with CodexIsland → https://codexisland.com
+        Make your card with NotchBridge → https://github.com/YungGravy0002/NotchBridge
         """
     }
 

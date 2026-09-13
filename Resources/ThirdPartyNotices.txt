@@ -1,4 +1,3 @@
-Grok and Antigravity icons adapted from CodexBar
 https://github.com/steipete/CodexBar
 
 MIT License

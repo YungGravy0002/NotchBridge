@@ -24,7 +24,7 @@ struct PricingCatalogTests {
         // explicit `cache:`, refreshIfNeeded defaults to the real cache and
         // the suite silently overwrites the user's installed catalog.
         let tmp = URL(fileURLWithPath: NSTemporaryDirectory())
-            .appendingPathComponent("codexisland-catalog-test.json")
+            .appendingPathComponent("notchbridge-catalog-test.json")
         try? FileManager.default.removeItem(at: tmp)
 
         // A well-formed v1 payload is accepted and decoded.

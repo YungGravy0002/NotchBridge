@@ -3,17 +3,17 @@ import AppKit
 import Combine
 
 @main
-enum CodexIslandEntryPoint {
+enum NotchBridgeEntryPoint {
     @MainActor
     static func main() {
         if CommandLine.arguments.dropFirst().first == "--recover-claude" {
             exit(ClaudeUsageRecovery.run(arguments: Array(CommandLine.arguments.dropFirst(2))))
         }
-        CodexIslandApp.main()
+        NotchBridgeApp.main()
     }
 }
 
-struct CodexIslandApp: App {
+struct NotchBridgeApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     var body: some Scene {
         // Placeholder scene — `App` requires at least one `Scene`. We never
@@ -71,10 +71,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         if offerWeeklyCard {
             let costs = CostStore.shared
-            weeklyCardLaunchObservation = Publishers.CombineLatest3(
-                costs.$claudeLoading, costs.$codexLoading, costs.$connectedLoading
+            weeklyCardLaunchObservation = Publishers.CombineLatest(
+                costs.$claudeLoading, costs.$codexLoading
             )
-            .filter { !$0 && !$1 && $2.isEmpty }
+            .filter { !$0 && !$1 }
             .first()
             .receive(on: RunLoop.main)
             .sink { [weak self] _ in
@@ -94,9 +94,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // Wire the alert engine after the usage store so its initial
         // recompute sees whatever values the first refresh has produced.
         AlertEngine.shared.start()
-
-        // Touch the shared updater so Sparkle starts its background scheduler.
-        _ = UpdaterController.shared
     }
 
     /// Pin the app to the run loop until the user explicitly quits.

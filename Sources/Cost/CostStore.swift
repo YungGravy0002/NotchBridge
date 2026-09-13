@@ -20,9 +20,6 @@ final class CostStore: ObservableObject {
     @Published var claudeLoading = false
     @Published var codexLoading = false
     @Published var lastUpdated: Date?
-    @Published private(set) var connectedCosts: [IslandProvider: ProviderCost] = [:]
-    @Published private(set) var connectedLoading: Set<IslandProvider> = []
-    @Published private(set) var connectedUpdated: [IslandProvider: Date] = [:]
     @Published private(set) var localNotices: [IslandProvider: String] = [:]
     @Published private(set) var historySaveErrors: [IslandProvider: String] = [:]
 
@@ -30,10 +27,6 @@ final class CostStore: ObservableObject {
         switch provider {
         case .claude: return claude
         case .codex: return codex
-        case .grok, .antigravity:
-            return connectedCosts[provider] ?? ProviderCost(
-                today: .unavailable(label: "Today", reason: "Local usage has not been loaded"),
-                month: .unavailable(label: CostBucketing.currentMonthLabel(), reason: "Local usage has not been loaded"))
         }
     }
 
@@ -41,15 +34,14 @@ final class CostStore: ObservableObject {
         switch provider {
         case .claude: return claudeLoading
         case .codex: return codexLoading
-        case .grok, .antigravity: return connectedLoading.contains(provider)
         }
     }
 
     func updatedAt(_ provider: IslandProvider) -> Date? {
-        provider.usesLegacyUsage ? lastUpdated : connectedUpdated[provider]
+        lastUpdated
     }
 
-    var loading: Bool { claudeLoading || codexLoading || !connectedLoading.isEmpty }
+    var loading: Bool { claudeLoading || codexLoading }
 
     private static let cacheKey = "MacIsland.costCache.v7"
     private static let cacheEncoder = JSONEncoder()
@@ -77,73 +69,28 @@ final class CostStore: ObservableObject {
             loadDemoData()
             return
         }
-        for provider in [IslandProvider.antigravity, .grok] where !connectedLoading.contains(provider) {
-            connectedLoading.insert(provider)
-            Task.detached(priority: .utility) { [weak self] in
-                let observedAt = Date()
-                var scan = provider == .antigravity
-                    ? AntigravityLogReader.scan(lookbackDays: nil)
-                    : GrokLogReader.scan(lookbackDays: nil)
-                let saved = UsageLedger.shared.retain(scan.events,
-                                                      source: provider == .antigravity ? .antigravity : .grok,
-                                                      observedAt: observedAt)
-                scan.events = saved.events
-                let cost = CostSummary.summarize(events: scan.events, historicalDays: saved.historicalDays)
-                await self?.commitLocal(cost, scan: scan, provider: provider, saveError: saved.saveError)
-            }
-        }
-        // Only scan OpenCode when at least one provider will consume
-        // the result; avoids wasted I/O when both are already loading.
-        let openCodeTask: Task<UsageLedger.Snapshot, Never>?
-        if !claudeLoading || !codexLoading {
-            openCodeTask = Task.detached(priority: .userInitiated) {
-                let observedAt = Date()
-                return UsageLedger.shared.retain(OpenCodeLogReader.scan(lookbackDays: nil),
-                                                 source: .openCode, observedAt: observedAt)
-            }
-        } else {
-            openCodeTask = nil
-        }
         // Per-provider gate so a slow Claude scan doesn't block a fast
         // Codex one (and vice versa) on the next tick.
         if !claudeLoading {
             claudeLoading = true
             Task.detached(priority: .userInitiated) { [weak self] in
-                let openCode = await openCodeTask?.value
                 let observedAt = Date()
                 let saved = UsageLedger.shared.retain(ClaudeLogReader.scan(lookbackDays: nil),
                                                       source: .claude, observedAt: observedAt)
-                let events = saved.events + (openCode?.events.filter { $0.provider == .claude } ?? [])
-                let cost = CostSummary.summarize(events: events, historicalDays: saved.historicalDays)
-                await self?.commitClaude(cost, saveError: saved.saveError ?? openCode?.saveError)
+                let cost = CostSummary.summarize(events: saved.events, historicalDays: saved.historicalDays)
+                await self?.commitClaude(cost, saveError: saved.saveError)
             }
         }
         if !codexLoading {
             codexLoading = true
             Task.detached(priority: .userInitiated) { [weak self] in
-                let openCode = await openCodeTask?.value
                 let observedAt = Date()
                 let saved = UsageLedger.shared.retain(CodexLogReader.scan(lookbackDays: nil),
                                                       source: .codex, observedAt: observedAt)
-                let events = saved.events + (openCode?.events.filter { $0.provider == .codex } ?? [])
-                let cost = CostSummary.summarize(events: events, historicalDays: saved.historicalDays)
-                await self?.commitCodex(cost, saveError: saved.saveError ?? openCode?.saveError)
+                let cost = CostSummary.summarize(events: saved.events, historicalDays: saved.historicalDays)
+                await self?.commitCodex(cost, saveError: saved.saveError)
             }
         }
-    }
-
-    private func commitLocal(_ cost: ProviderCost, scan: LocalCostScan, provider: IslandProvider, saveError: String?) {
-        connectedLoading.remove(provider)
-        historySaveErrors[provider] = saveError
-        localNotices[provider] = saveError ?? scan.notice
-        if scan.unreadableFiles > 0 && scan.events.isEmpty { return }
-        var displayed = cost
-        if scan.events.isEmpty {
-            displayed.today = .unavailable(label: displayed.today.label, reason: scan.notice ?? "No local usage records yet")
-            displayed.month = .unavailable(label: displayed.month.label, reason: scan.notice ?? "No local usage records yet")
-        }
-        connectedCosts[provider] = displayed
-        connectedUpdated[provider] = Date()
     }
 
     private func commitClaude(_ cost: ProviderCost, saveError: String?) {
@@ -239,25 +186,6 @@ final class CostStore: ObservableObject {
                 175, 188, 201, 214, 228, 239, 254, 268, 282, 164,
             ], millionScale: 1_000_000, apiDollarsPerMillion: 0.832)
         )
-        for (provider, scale) in [(IslandProvider.grok, 0.32), (.antigravity, 0.24)] {
-            func scaled(_ window: CostWindow) -> CostWindow {
-                CostWindow(dollars: window.dollars * scale,
-                           tokens: Int(Double(window.tokens) * scale),
-                           billableTokens: Int(Double(window.billableTokens) * scale),
-                           series: window.series.map { $0 * scale },
-                           label: window.label, error: nil, unknownModels: [])
-            }
-            connectedCosts[provider] = ProviderCost(
-                today: scaled(codex.today), month: scaled(codex.month),
-                dailyTokens: codex.dailyTokens.map {
-                    DailyTokenBucket(dayStart: $0.dayStart,
-                                     tokens: Int(Double($0.tokens) * scale),
-                                     billableTokens: Int(Double($0.billableTokens) * scale),
-                                     dollars: $0.dollars.map { $0 * scale }, unpricedTokens: 0)
-                })
-            connectedUpdated[provider] = Date()
-            localNotices[provider] = "Demo data — illustrative API-equivalent cost, not actual spending."
-        }
         self.lastUpdated = Date()
     }
 
@@ -384,8 +312,6 @@ extension IslandProvider {
         switch self {
         case .claude: return .claude
         case .codex: return .codex
-        case .grok: return .grok
-        case .antigravity: return .antigravity
         }
     }
 }

@@ -1,136 +1,67 @@
-# CLAUDE.md
+# CLAUDE.md — NotchBridge
 
-Project-specific guardrails. **Read every section before touching this repo.**
+**Read `PROGRESS.md` first.** It holds the live task list and the latest
+checkpoint. `PLAN.md` holds the full design; this file is the short version.
 
-## Release process — MANDATORY
+## What this is
 
-This app ships via Sparkle auto-update. Get any of this wrong and you brick auto-update for everyone who's already installed.
+NotchBridge is a macOS notch overlay showing Claude Code + Codex quota and
+local token cost. It is a fork of [CodexIsland](https://github.com/ericjypark/codex-island)
+by Eric Park (MIT). The fork strips Grok/Antigravity/OpenCode, the auto-updater,
+and the automatic Haiku token-refresh ping, and adds live
+per-session state, a multi-session view, and per-project/per-model cost.
 
-### The loop (3 commands)
+Bundle ID: `com.alecmarinov.NotchBridge`. App name: `NotchBridge`.
 
-```sh
-echo "X.Y.Z" > VERSION                                # 1. Bump
-git commit -am "chore(release): bump VERSION to X.Y.Z" \
-  && git tag vX.Y.Z                                   # 2. Commit + tag
-git push origin main vX.Y.Z                           # 3. Push (fires CI)
-```
-
-The marketing landing site at `ericjypark/codex-island-landing` has its own
-`VERSION` file (the hero chip + footer read it at build time). Bump it in
-that repo too, in the same release sweep, or the public site keeps showing
-the prior version even after `brew install` ships the new one.
-
-That's it. CI does **everything else** in ~1.5 min:
-
-- Builds the universal DMG
-- Signs it with the EdDSA key from the `SPARKLE_ED_PRIVATE_KEY` secret
-- Generates `appcast.xml` listing the new version
-- Uploads DMG + appcast as release assets
-- Mirrors the cask to `ericjypark/homebrew-tap` with the new version + SHA-256
-
-Watch with `gh run watch --exit-status` if you want confirmation, or just trust it.
-
-### Hard rules — break these and you brick auto-update
-
-1. **`VERSION` must be a single-monotonic version like `0.0.X`, NOT `1` or `100` or anything weird.** `build.sh` uses `$VERSION` as both `CFBundleVersion` and `CFBundleShortVersionString`. Sparkle compares `CFBundleVersion` of the running app against `sparkle:version` in the appcast using Apple's component-wise comparator — so `"1"` parses as `[1]` and is **larger than** `"0.0.99"`. Stay in semver. Always increase.
-
-2. **The Sparkle public key in `build.sh` (`SU_PUBLIC_KEY="bz1g..."`) must NEVER be changed casually.** Every existing install verifies updates against this exact key. Change it and every prior install rejects every future update silently. The matching private key lives in (a) the maintainer's macOS Keychain under service `https://sparkle-project.org` and (b) the `SPARKLE_ED_PRIVATE_KEY` GitHub Actions secret. To rotate, see the migration note in `docs/SPARKLE.md` (TL;DR: don't).
-
-3. **Don't manually edit `Casks/codexisland.rb` for a version bump.** CI rewrites it on the homebrew-tap side at release time. Manual version/SHA edits are overwritten or drift. (Editing unrelated cask metadata — postflight, zap, livecheck — via a normal commit is fine; CI preserves those.)
-
-4. **Never edit appcast XML files by hand.** The appcast is a release asset built by `release.sh` from the signed DMG. Hand-edits invalidate the EdDSA signature.
-
-5. **Never commit `Vendor/`.** It's gitignored. The `bin/sign_update`, `bin/generate_keys`, etc. binaries live there for local use; CI re-vendors via `scripts/setup-sparkle.sh`.
-
-### CI secrets (one-time, already configured)
-
-These two GitHub Actions secrets exist on the `codex-island` repo:
-
-- **`SPARKLE_ED_PRIVATE_KEY`** — the EdDSA private key. Without it CI fails at the signing step.
-- **`HOMEBREW_TAP_TOKEN`** — fine-grained PAT with `contents: write` on `ericjypark/homebrew-tap` only. Without it the cask-sync step warns and skips, but the GitHub Release still ships.
-
-If either is rotated, regenerate via the original instructions in `docs/SPARKLE.md`.
-
-### Smoke-testing the update prompt locally
-
-If you want to verify Sparkle's UI before tagging:
+## Build
 
 ```sh
-./release.sh                  # produces dist/CodexIsland-X.Y.Z.dmg + dist/appcast.xml
-                              # (uses Keychain key — no env vars needed locally)
+./build.sh          # universal arm64+x86_64, macOS 13+, ~3 min → build/NotchBridge.app
+./scripts/verify.sh # build + 1-second smoke launch
 ```
 
-The local `release.sh` is identical to CI except for asset upload. To force-trigger an update prompt without publishing: temporarily change `SUFeedURL` in `build.sh` to point at `http://127.0.0.1:8765/appcast.xml`, serve `dist/appcast.xml` from there with `python3 -m http.server 8765`, run with a lower local `VERSION` than the appcast advertises, hit Check Now.
+Bare `swiftc`, one invocation per arch, hand-written `Info.plist`. **No
+SwiftPM, no `.xcodeproj`.** Only Xcode Command Line Tools are installed on
+this machine — never add a step that needs full Xcode.
 
-To build with auto-update **disabled** (debug copies): `SU_FEED_URL= ./build.sh`.
+## Tests
 
-### Things that have already broken and how they were fixed
+```sh
+scripts/run-tests.sh
+```
 
-History — read before re-stepping on these rakes:
+Standalone test binaries, no XCTest. Each binary hand-lists its source files
+— adding a source to an existing test target means editing that `swiftc`
+line. `pricing-catalog-race-tests` runs without `-sanitize=thread`: the TSan
+runtime in Swift 6.2.4 CLT crashes in its own init on macOS 26.5. Re-add the
+flag when a toolchain update fixes it. `scripts/audit-network.sh` enforces the
+URL allowlist; run it before every commit that touches `Sources/`.
 
-| Problem | Symptom | Root cause | Fix |
-|---|---|---|---|
-| `CFBundleVersion = "1"` hardcoded | Sparkle never sees any update as newer | `"1"` > `"0.0.X"` in component-wise comparison | `build.sh` now sets it to `$VERSION` |
-| `SUPublicEDKey` empty in CI builds | Sparkle silently rejects every signed update | Public key was in gitignored `Vendor/` only | Public key hardcoded in `build.sh` |
-| `xattr -d` non-recursive in cask postflight | "Updater failed to start" on first Check Now | Quarantine attr remained on Sparkle's nested `Updater.app` | `xattr -dr` (recursive) |
-| `--no-quarantine` in install docs | `brew install` fails with "switch is disabled" | Homebrew removed the flag in late 2025 | Cask postflight strips the attr; flag removed from docs |
-| `…` after `$VAR` in shell scripts | CI fails with `unbound variable` | Non-UTF-8 locale on runners makes bash include trailing bytes in identifier | Use `${VAR}…` braces, or stick to ASCII in echo strings |
-| Old yonsei email in commits | Vercel rejected landing deploys | Local git config used unverified email | Set `git config user.email` to a GitHub-verified address before committing |
-| Landing tried to read `../VERSION` | Vercel build ENOENT'd at `/vercel/VERSION` | Landing is its own repo; Vercel only checks out `codex-island-landing`, so `..` escapes the build root | Landing has its own `VERSION` file, read with `path.join(process.cwd(), "VERSION")` — sync it on every release |
-| Claude usage chip showing `HTTP 403` | Existing installs stop showing real numbers post-upgrade | Anthropic added `user:profile` to the required scope set on `/api/oauth/usage` (mid-2026) — pre-upgrade keychain tokens only carry `user:inference` | User runs `claude /login` to re-mint with the new scope set; app surfaces "re-login: claude /login" instead of raw HTTP code |
-| "Always Allow" keychain grants dying within hours | ACL password prompt returns hours after granting, same app version | Claude Code's ~8h `security add-generic-password -U` rewrite resets the item's partition list to `apple-tool:`, silently wiping per-app grants (a Developer ID signature would not survive it either) | Keychain secret reads go through `/usr/bin/security` (permanently in the `apple-tool:` partition + item ACL) as PRIMARY; in-process SecItem read is fallback-only |
-| Refresh URL pinned to `console.anthropic.com` | Refresh path silently 404s on tokens minted by current CLI | OAuth issuer migrated to `platform.claude.com/v1/oauth/token`; old host is no longer the canonical issuer | Refresh URL bumped to `platform.claude.com` |
+## Invariants (PLAN.md §5) — do not break
 
-## Architecture pointers
-
-- `Sources/Window/IslandWindowController.swift` — borderless overlay window. Listens to `NSApplication.didChangeScreenParametersNotification` to reposition on display changes; prefers the screen with `safeAreaInsets.top > 0` (the notched display).
-- `Sources/Update/UpdaterController.swift` — wraps Sparkle's `SPUStandardUpdaterController`. Reads `SUFeedURL` / `SUPublicEDKey` from Info.plist (injected by `build.sh`). Auto-check state is stored by Sparkle itself in `NSUserDefaults` under `SU*` keys.
-- `Sources/Usage/UsageFetcher.swift` — Codex (`/wham/usage`) and Claude (`/api/oauth/usage`) fetchers. Claude requires the `claude-code/X.Y.Z` User-Agent + `oauth-2025-04-20` beta header. Claude token handling is STRICTLY READ-ONLY (`ClaudeCredentials`): the app never calls the OAuth refresh endpoint and never writes the keychain. Anthropic rotates the refresh token on every refresh call and revokes the whole token family on old-token reuse, so a second refresher racing Claude Code invalidates the user's CLI login (this happened — do not reintroduce refresh). A 401 on the cached access token re-reads the store and retries once in the same pass (Claude Code rotates the token ~8h and our in-memory copy goes stale); only when the store itself holds a dead token does the app surface "token expired — run claude" until Claude Code refreshes it. Desktop-app Claude Code never maintains the CLI store (it injects a host-refreshed `CLAUDE_CODE_OAUTH_TOKEN` into its embedded CLI; its own tokens live in Chromium Safe Storage the app must not read), so on desktop-only days that expiry is permanent — `UsageStore` then spawns ONE detached `claude -p "ok" --model haiku --strict-mcp-config` ping per expiry episode to make the CLI refresh + write back itself, and a metadata-only credential-store fingerprint watch (5s tick, never prompts) refetches the moment the store changes. The ping is the CLI refreshing its own family — it is NOT the app calling the refresh endpoint, which stays forbidden. Credential sources, in order: env token → keychain items DISCOVERED by attributes-only enumeration matching service `Claude Code-credentials` or `Claude Code-credentials-*` (the CLI hashes a suffix per custom `CLAUDE_CONFIG_DIR`; we match what exists instead of recomputing its private formula, and secret reads go through `/usr/bin/security` FIRST — see the rake table) → `$CLAUDE_CONFIG_DIR/.credentials.json` as fallback (Claude Code 2.x maintains the keychain as primary on macOS and deletes/strands the file when the keychain works, so a coexisting file is the stale store). The usage endpoint also requires the `user:profile` scope as of mid-2026 — tokens from older logins return 403 and the only fix is `claude /login`.
-- `Sources/Usage/AppUsage.swift` — `plan` field carries Claude's `subscriptionType` (from keychain) or Codex's `plan_type` (from API top-level). Surfaced as the chip badge in `SettingsView` + `UsageView`.
-
-## Build details
-
-- `build.sh` — universal binary (arm64 + x86_64 via `lipo`), macOS 13+, ad-hoc codesign, embeds Sparkle.framework with `@executable_path/../Frameworks` rpath.
-- Unsigned by Apple — no $99 Developer ID. The ad-hoc sign is just to dodge "is damaged and can't be opened" Gatekeeper rejection on download. Sparkle's EdDSA signing handles update integrity independently.
-- `scripts/setup-sparkle.sh` downloads Sparkle 2.9.1 into `Vendor/Sparkle/` (idempotent). Runs automatically as part of `build.sh`.
-
-## What NOT to change without explicit user request
-
-- The `5m / 15m / 30m` polling presets (`Sources/Model/RefreshIntervalStore.swift`) — Anthropic rate-limits aggressively. Anything below 5m burns the daily quota.
-- The `claude-code/X.Y.Z` User-Agent string — Anthropic gates `/api/oauth/usage` on it. Without it, requests 401 even with a valid token.
-- The bundle ID `dev.codexisland.CodexIsland` — changing it orphans every existing user's preferences and Launch-at-Login registration.
-- The `SU_PUBLIC_KEY` constant in `build.sh`. See hard rule #2.
-
-## `docs/` vs `notes/` — what gets committed
-
-This repo is public open source. `docs/` is for things a contributor or
-curious user would read. `notes/` is gitignored and is for maintainer-only
-operational material. **When in doubt, default to `notes/`** — it's
-trivial to promote a file later, painful to scrub git history.
-
-**`docs/` (committed, public):**
-- Build / release / signing process (e.g. `SPARKLE.md`).
-- Architecture deep-dives, protocol notes, contributor onboarding.
-- Anything that helps someone reading the source understand it or ship a PR.
-
-**`notes/` (gitignored, maintainer-only) — examples of what belongs here:**
-- Launch / marketing playbooks (where to post, when to post, UTM schemas, channel-by-channel rules).
-- Analytics & traffic ops (PostHog dashboards, GitHub traffic API workflows, install-funnel telemetry, dashboard URLs).
-- Anything mentioning private infra: tokens, secret names, dashboard IDs, internal cron schedules — even if the secret value isn't there, the *shape* of the deployment is.
-- Personal launch-strategy retrospectives, growth experiments, A/B copy drafts.
-
-**Heuristic:** if removing the file from the public repo would *embarrass*
-nothing and *help* nobody outside the maintainer, it belongs in `notes/`.
-If it would actively help a contributor or a downstream packager, it
-belongs in `docs/`.
-
-When creating a new doc in this category, do **not** add it to `docs/` and
-later move it — moving leaves a deletion in history that still shows the
-title and intent. Create it in `notes/` from the start.
+1. **Local-only network allowlist.** The only endpoints the app may contact
+   are `api.anthropic.com`, `chatgpt.com`, the pricing-catalog JSON and the
+   currency endpoint already present in `Sources/`, and `127.0.0.1`.
+   Any other host is a defect.
+2. **Never emit a hook `decision`.** Hook handling must always answer
+   200 with an empty body and never block a CLI. Forwarder scripts
+   `exit 0` unconditionally.
+3. **Never add a model call.** The app makes no LLM requests, ever. The
+   upstream Haiku refresh ping was removed on purpose; do not reintroduce it
+   or any equivalent.
+4. **Claude credentials are read-only.** The app never calls the OAuth
+   refresh endpoint and never writes the keychain — Anthropic revokes the
+   whole token family on old-token reuse. Re-reading is fine; the CLI is the
+   only legitimate refresher.
+5. **Five-minute polling floor** (`Sources/Model/RefreshIntervalStore.swift`)
+   and the `claude-code/X.Y.Z` User-Agent stay as they are.
+6. **UserDefaults keys keep the `MacIsland.` prefix.** It is stale upstream
+   naming, but renaming orphans stored preferences. Same for the two legacy
+   storage keys marked `// TODO(notchbridge): legacy key name`.
 
 ## Style
 
-- Conventional Commits: `feat:`, `fix:`, `chore:`, `refactor:`, `test:`, `docs:`. No `Co-Authored-By` lines.
-- Strict TypeScript / Swift — no `any`, no force-unwraps without justification.
-- Default to no comments. Only add when the WHY is non-obvious (a constraint, a workaround for a specific bug, behavior that would surprise a reader).
-- Match existing style in the file you're editing, even if you'd do it differently.
+- Conventional Commits: `feat:`, `fix:`, `chore:`, `refactor:`, `test:`, `docs:`.
+- No force-unwraps without justification.
+- Default to no comments; add one only when the WHY is non-obvious.
+- Match the existing style of the file you are editing.

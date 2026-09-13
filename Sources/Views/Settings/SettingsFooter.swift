@@ -36,7 +36,7 @@ struct SettingsFooter: View {
             }
             .buttonStyle(PressableButtonStyle(scale: 0.97))
             .onHover { quitHovered = $0 }
-            .help(L10n.tr("Quit CodexIsland"))
+            .help(L10n.tr("Quit NotchBridge"))
             .animation(.hoverFade, value: quitHovered)
         }
         .padding(.horizontal, 24)

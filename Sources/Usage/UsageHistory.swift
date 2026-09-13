@@ -27,6 +27,7 @@ final class UsageHistoryStore: ObservableObject {
     /// interval filling memory.
     private static let maxAge: TimeInterval = 7 * 86400
     private static let maxSamples = 1000
+    // TODO(notchbridge): legacy key name
     private static let storageKey = "CodexIsland.usageHistory.v1"
 
     private var series: [String: [UsageSample]]

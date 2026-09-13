@@ -23,7 +23,6 @@ struct SettingsView: View {
     @ObservedObject private var usage = UsageStore.shared
     @ObservedObject private var cost = CostStore.shared
     @ObservedObject private var currencyStore = CurrencyStore.shared
-    @ObservedObject private var updater = UpdaterController.shared
 
     @AppStorage("Settings.activeTab") private var activeTabRaw: String = SettingsTab.general.rawValue
     @State private var recoveryPresented = false
@@ -155,7 +154,6 @@ struct SettingsView: View {
             }
             .padding(.horizontal, 14)
             alertsSection
-            updatesSection
         }
     }
 
@@ -223,7 +221,7 @@ struct SettingsView: View {
             sectionLabel("General")
             SettingsRow(
                 title: "Launch at Login",
-                subtitle: launchStore.errorMessage ?? "Open CodexIsland when you sign in."
+                subtitle: launchStore.errorMessage ?? "Open NotchBridge when you sign in."
             ) {
                 SettingsToggle(isOn: launchStore.isEnabled) { launchStore.toggle() }
             }
@@ -288,7 +286,7 @@ struct SettingsView: View {
             if alertPrefs.enabled && isDevMode {
                 SettingsRow(
                     title: "Preview",
-                    subtitle: "Inject test percentages. Visible only when launched with CODEXISLAND_DEBUG=1."
+                    subtitle: "Inject test percentages. Visible only when launched with NOTCHBRIDGE_DEBUG=1."
                 ) {
                     previewButtons
                 }
@@ -456,29 +454,6 @@ struct SettingsView: View {
         }
     }
 
-    private var updatesSection: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            sectionLabel("Updates")
-            SettingsRow(
-                title: "Check for updates automatically",
-                subtitle: "Check for new versions in the background and notify you when one's available."
-            ) {
-                SettingsToggle(isOn: updater.automaticallyChecks) {
-                    updater.automaticallyChecks.toggle()
-                }
-            }
-            SettingsRow(
-                title: "Check now",
-                subtitle: "Look for a new version immediately."
-            ) {
-                PillButton(label: "Check") { updater.checkForUpdates() }
-            }
-        }
-        .padding(.horizontal, 14)
-        .padding(.top, 14)
-        .padding(.bottom, 6)
-    }
-
     private var languagePicker: some View {
         Picker("", selection: languageSelection) {
             ForEach(AppLanguage.allCases, id: \.self) { language in
@@ -504,8 +479,8 @@ struct SettingsView: View {
 
     private func showLanguageRestartPrompt() {
         let alert = NSAlert()
-        alert.messageText = L10n.tr("Restart CodexIsland to apply language?")
-        alert.informativeText = L10n.tr("Your language change will take effect after CodexIsland restarts.")
+        alert.messageText = L10n.tr("Restart NotchBridge to apply language?")
+        alert.informativeText = L10n.tr("Your language change will take effect after NotchBridge restarts.")
         alert.addButton(withTitle: L10n.tr("Restart now"))
         alert.addButton(withTitle: L10n.tr("Later"))
         if alert.runModal() == .alertFirstButtonReturn {

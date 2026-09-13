@@ -163,7 +163,7 @@ struct WeeklyUsageCard: View {
                 HStack(spacing: 6) {
                     WeeklyCardBrandMark()
                         .frame(width: 17, height: 17)
-                    Text("CodexIsland")
+                    Text("NotchBridge")
                         .font(.system(size: 14, weight: .semibold))
                         .tracking(-0.3)
                 }
@@ -174,7 +174,7 @@ struct WeeklyUsageCard: View {
                         Image(systemName: "arrow.up.right")
                     }
                     .font(.system(size: 11, weight: .medium))
-                    Text("codexisland.com")
+                    Text("github.com/YungGravy0002/NotchBridge")
                         .font(.system(size: 11, weight: .medium))
                         .foregroundStyle(theme.secondary)
                 }
@@ -231,7 +231,7 @@ private struct WeeklySealOutline: Shape {
 }
 
 private struct WeeklyCardBrandMark: View {
-    private static let image = Bundle.main.url(forResource: "codexisland_logo", withExtension: "png")
+    private static let image = Bundle.main.url(forResource: "notchbridge_logo", withExtension: "png")
         .flatMap { NSImage(contentsOf: $0) }
 
     var body: some View {

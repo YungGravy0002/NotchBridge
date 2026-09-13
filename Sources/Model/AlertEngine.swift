@@ -79,8 +79,6 @@ final class AlertEngine: ObservableObject {
         let triggers: [AnyPublisher<Void, Never>] = [
             UsageStore.shared.$claude.map { _ in () }.eraseToAnyPublisher(),
             UsageStore.shared.$codex.map { _ in () }.eraseToAnyPublisher(),
-            ProviderConnectionStore.shared.objectWillChange.map { _ in () }.eraseToAnyPublisher(),
-            ProviderQuotaPreferences.shared.objectWillChange.map { _ in () }.eraseToAnyPublisher(),
             AlertThresholdStore.shared.objectWillChange.map { _ in () }.eraseToAnyPublisher(),
             ProviderVisibilityStore.shared.objectWillChange.map { _ in () }.eraseToAnyPublisher(),
         ]
@@ -125,10 +123,7 @@ final class AlertEngine: ObservableObject {
                 // alert on 5h (peekWindow prefers it).
                 window: usage.codex.peekWindow
             ),
-        ] + [IslandProvider.grok, .antigravity].map { provider in
-            AlertDecision.WindowInput(provider: provider, visible: visibility.selected.contains(provider),
-                window: ProviderConnectionStore.shared.primary(provider)?.window ?? .unknown)
-        }
+        ]
 
         // Severity drives the silhouette tint and is always computed: a
         // user launching at 96% should see red immediately, even before

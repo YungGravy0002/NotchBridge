@@ -20,15 +20,11 @@ struct WeeklyCardRenderHarness {
         let interval = WeeklyCardPeriod.lastSevenDays.interval(now: now, calendar: calendar)
         let values: [IslandProvider: [Int]] = [
             .claude: [3_200_000, 1_800_000, 5_100_000, 8_400_000, 2_200_000, 4_800_000, 6_200_000],
-            .codex: [9_300_000, 7_600_000, 2_400_000, 6_200_000, 10_800_000, 15_400_000, 12_300_000],
-            .antigravity: [1_200_000, 0, 1_900_000, 2_800_000, 1_000_000, 3_600_000, 2_100_000],
-            .grok: [0, 0, 0, 0, 400_000, 100_000, 500_000]
+            .codex: [9_300_000, 7_600_000, 2_400_000, 6_200_000, 10_800_000, 15_400_000, 12_300_000]
         ]
         let costs: [IslandProvider: [Double]] = [
             .claude: [71.2, 38.4, 91.25, 182.35, 48.70, 121.80, 148.16],
-            .codex: [45.10, 29.40, 17.60, 67.10, 56.70, 109.70, 97.80],
-            .antigravity: [11.70, 0, 14.50, 39.70, 12.55, 44.80, 25.40],
-            .grok: [0, 0, 0, 0, 8.55, 2.30, 10.15]
+            .codex: [45.10, 29.40, 17.60, 67.10, 56.70, 109.70, 97.80]
         ]
         let buckets = Dictionary(uniqueKeysWithValues: values.map { provider, values in
             (provider,
@@ -58,7 +54,7 @@ struct WeeklyCardRenderHarness {
             }
         }
         for (label, amount) in [("empty", 0), ("tiny", 1), ("huge", 99_999_999_999)] {
-            let snapshot = WeeklyUsageSnapshot.make(buckets: [.grok: [DailyTokenBucket(dayStart: interval.start, tokens: amount, billableTokens: amount,
+            let snapshot = WeeklyUsageSnapshot.make(buckets: [.claude: [DailyTokenBucket(dayStart: interval.start, tokens: amount, billableTokens: amount,
                                                                                       dollars: Double(amount) / 100_000, unpricedTokens: 0)]],
                                                       now: now, calendar: calendar, isDemo: true, hasPartialRecords: true)
             let data = try WeeklyCardExporter.png(snapshot: snapshot, format: .square,
@@ -66,7 +62,7 @@ struct WeeklyCardRenderHarness {
             try verify(data, format: .square, tier: snapshot.tier(for: .apiValue))
             try data.write(to: destination.appendingPathComponent("edge-\(label).png"))
         }
-        let differentTiers = WeeklyUsageSnapshot.make(buckets: [.grok: [DailyTokenBucket(
+        let differentTiers = WeeklyUsageSnapshot.make(buckets: [.claude: [DailyTokenBucket(
             dayStart: interval.start, tokens: 1_000_000_000, billableTokens: 1_000_000, dollars: 9.99, unpricedTokens: 0
         )]], now: now, calendar: calendar, isDemo: true)
         for metric in WeeklyCardMetric.allCases {
@@ -104,7 +100,7 @@ struct WeeklyCardRenderHarness {
         let data = try Data(contentsOf: destination.appendingPathComponent("black-apiValue-feed.png"))
         let share = try WeeklyCardShareContent(png: data, caption: snapshot.shareText(metric: .apiValue))
         guard share.image.representations.contains(where: { $0.pixelsWide == 1080 && $0.pixelsHigh == 1350 }),
-              share.caption.contains("not a bill"), share.caption.contains("https://codexisland.com") else {
+              share.caption.contains("not a bill"), share.caption.contains("https://github.com/YungGravy0002/NotchBridge") else {
             throw WeeklyCardExportError.renderingFailed
         }
         let clipboard = NSPasteboard.withUniqueName()

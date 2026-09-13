@@ -147,7 +147,7 @@ enum LogParseCache {
     private static func cacheURL(filename: String) -> URL? {
         let fm = FileManager.default
         guard let caches = fm.urls(for: .cachesDirectory, in: .userDomainMask).first else { return nil }
-        let dir = caches.appendingPathComponent("dev.codexisland.CodexIsland", isDirectory: true)
+        let dir = caches.appendingPathComponent("com.alecmarinov.NotchBridge", isDirectory: true)
         try? fm.createDirectory(at: dir, withIntermediateDirectories: true)
         return dir.appendingPathComponent(filename)
     }
